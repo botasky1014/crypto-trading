@@ -1,0 +1,55 @@
+# CLAUDE.md
+
+学习用的加密货币交易微服务项目（Spring Boot / Spring Cloud + Vue），接入 Alpaca **加密货币现货模拟盘**。
+
+## 文档
+
+- `docs/design.md`：设计的唯一依据。
+- `docs/plan.md`：实施总览，含执行规则、端口表（§4）、关键场景对应表（§7）、进度。
+- `docs/plans/P<n>-*.md`：各阶段任务，每个任务都有 checklist、验证步骤和停止条件。
+
+## 工作规则
+
+- **以 design.md 为准**。计划和设计冲突时，停下来向用户报告。
+- **不猜测**。会影响功能或结构、但文档里没有规定的问题，先问用户。纯实现细节（命名、私有方法拆分）可以自己定。
+- 碰到任务的**停止条件**必须停下，整理现象、可选方案和推荐方案，交给用户决定。
+- **一次只做一个任务**，按编号顺序做，做完整个 checklist 再开始下一个。
+- 每个任务结束时：
+  - `./gradlew build` 通过（含单元测试、ArchUnit、Spotless）；改到前端时还要通过 `pnpm -C web build` 和 `pnpm -C web test`；
+  - 任务"验证"一节的命令全部执行过，结果写进回复或提交说明；
+  - 在回复中给出建议的提交信息（Conventional Commits，例如 `feat(order): place order saga (P5-T03)`），每个任务对应一个提交。
+- **所有 git 提交操作都由用户手动完成**。绝对不要执行 `git add`、`git commit`、`git push`，也不要执行其他会改动暂存区或提交历史的命令。
+- **不提交密钥**。密钥只放在 `.env.local`（已加入 gitignore）或 Vault。
+- 测试和 CI 一律连 **alpaca-mock**。只有任务里明确写了"连真实模拟盘"才连 Alpaca，同一时间只能有一个环境连着真实 Alpaca。系统禁止连接 live 环境。
+- P6 之前遇到重要数据修改，用 `// AUDIT: <动作编码>` 注释标出，P6-T04 时统一换成 `@Audited`。
+
+## 环境限制
+
+- 本机是 Apple 芯片 Mac，16GB 内存。只启动当前任务需要的 Compose profile，所有镜像都要支持 `linux/arm64`。
+- JDK 25（Temurin，由 Gradle Toolchain 管理）；Gradle 9.x，Groovy DSL；Node LTS + pnpm。
+
+## 常用命令
+
+| 用途 | 命令 |
+| --- | --- |
+| 启动 / 停止中间件 | `scripts/dev.sh up core [mq] [obs] [mock]` / `scripts/dev.sh down` |
+| 查看容器内存 | `scripts/dev.sh stats` |
+| 环境自检 | `scripts/doctor.sh` |
+| 构建与全部检查 | `./gradlew build` |
+| 集成测试 | `./gradlew integrationTest` |
+| 启动服务 | `./gradlew :services:<name>:bootRun` |
+| 前端开发 | `pnpm -C web dev` |
+
+新增服务时，在 `deploy/compose/prometheus/targets/*.json` 里加一条抓取目标。
+
+## 代码约定
+
+- 目录结构：`build-logic/`（约定插件）、`platform/`（BOM）、`libs/`、`services/<name>/`、`tools/alpaca-mock/`、`web/`、`deploy/`。
+- 根包 `com.cryptotrading.<服务名>`。所有服务用同一套目录：`controller/`、`service/`（只放接口）+ `service/impl/`、`model/{entity,dto,enums,event}`、`mapper/`、`converter/`、`client/`、`listener/`、`job/`、`config/`。用不到的目录不建。
+- 以下规则由 ArchUnit 强制检查：
+  - 调用方向只能是 `controller → service → mapper/client`，不能反向，controller 也不能跳过 service 直接调 mapper 或 client；
+  - `@Transactional` 和 `@Audited` 只能写在 `service.impl` 中；
+  - `model` 不依赖 service、controller、mapper；
+  - 金额、数量、价格**禁止用 `double`/`float`**，全程用 `BigDecimal`；
+  - 服务之间不共享 entity，只通过 `libs` 里的契约（Avro、Protobuf、DTO）交互。
+- 服务间通信：order 调 risk 用 gRPC；同步调用用 REST（HTTP Interface + LoadBalancer）；事件走 Kafka（Avro）。内部接口的路径前缀是 `/internal`，gateway 不路由这些接口。
