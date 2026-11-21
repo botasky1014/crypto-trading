@@ -31,9 +31,9 @@ scripts/doctor.sh
 预期：每项均为 OK；缺失项给出安装提示。
 
 **Checklist：**
-- [ ] `doctor.sh` 可执行并覆盖上述全部检查项
-- [ ] 在本机运行全部 OK（如有缺失，提示用户安装后重跑）
-- [ ] `docs/setup/macos.md` 写清 Docker Desktop 与 IntelliJ 设置
+- [x] `doctor.sh` 可执行并覆盖上述全部检查项
+- [x] 在本机运行全部 OK（如有缺失，提示用户安装后重跑）
+- [x] `docs/setup/macos.md` 写清 Docker Desktop 与 IntelliJ 设置
 
 ---
 
@@ -45,8 +45,7 @@ scripts/doctor.sh
 - `git init`，默认分支 `main`。
 - `.gitignore`：Gradle、IntelliJ（保留 `.run/`）、macOS、Node、`.env.local`、`*.local.yaml`。
 - `.editorconfig`：UTF-8、LF、Java 4 空格、前端 2 空格。
-- 目录：`docs/`（放入 design.md、plan.md、plans/）、`docs/adr/`、`docs/verification/`、`scripts/`、`deploy/compose/`、`http/`、`.run/`。
-- `docs/adr/0000-template.md`，并为 design.md 附录 A 中的每一类决策各写一篇简短 ADR（背景、决策、后果，每篇不超过一屏）。
+- 目录：`docs/`（放入 design.md、plan.md、plans/）、`docs/verification/`、`scripts/`、`deploy/compose/`、`http/`、`.run/`。
 - `README.md`：项目一句话介绍、文档索引、快速开始（指向 `docs/setup/macos.md`）。
 
 **产出：** 上述文件和目录
@@ -60,7 +59,6 @@ git status && tree -L 2 -a -I '.git'
 **Checklist：**
 - [ ] `.gitignore` 忽略 `.env.local`
 - [ ] design.md、plan.md、plans/ 已放入 `docs/`
-- [ ] ADR 模板与决策 ADR 已创建
 - [ ] 已给出首个提交的建议提交信息（由用户手动提交）
 
 ---

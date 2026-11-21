@@ -1092,8 +1092,22 @@ crypto-trading/
 │   ├── k3d/                             # 集群创建脚本、values-local.yaml、values-ec2.yaml
 │   └── helm/                            # Charts（含 KEDA ScaledObject）
 └── docs/
-    ├── adr/                             # 架构决策记录
-    └── design.md
+    ├── plans/                           # 具体实现计划
+    │   ├── P0-environment-and-skeleton.md
+    │   ├── P1-auth-gateway-frontend.md
+    │   ├── P2-alpaca-integration.md
+    │   ├── P3-market-data.md
+    │   ├── P4-ledger-and-provisioning.md
+    │   ├── P5-trading.md
+    │   ├── P6-audit-config-reset.md
+    │   ├── P7-portfolio-and-strategy.md
+    │   ├── P8-observability.md
+    │   ├── P9-cloud-native.md
+    │   └── P10-upgrade.md
+    ├── setup/                           # 环境准备
+    │   └── macros.md                    # macOS本机环境准备
+    ├── plan.md                          # 实现计划总览
+    └── design.md                        # 系统设计
 ```
 
 ### 11.1 服务内部目录
