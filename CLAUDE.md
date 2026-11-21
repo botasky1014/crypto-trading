@@ -7,6 +7,7 @@
 - `docs/design.md`：设计的唯一依据。
 - `docs/plan.md`：实施总览，含执行规则、端口表（§4）、关键场景对应表（§7）、进度。
 - `docs/plans/P<n>-*.md`：各阶段任务，每个任务都有 checklist、验证步骤和停止条件。
+- `docs/setup/`：本机环境准备；`docs/verification/`：验证记录（兼容性、内存实测等）。
 
 ## 工作规则
 
@@ -15,7 +16,7 @@
 - 碰到任务的**停止条件**必须停下，整理现象、可选方案和推荐方案，交给用户决定。
 - **一次只做一个任务**，按编号顺序做，做完整个 checklist 再开始下一个。
 - 每个任务结束时：
-  - `./gradlew build` 通过（含单元测试、ArchUnit、Spotless）；改到前端时还要通过 `pnpm -C web build` 和 `pnpm -C web test`；
+  - `./gradlew build` 通过（含单元测试、ArchUnit、Spotless；P0-T03 建好 Gradle 骨架之前不适用）；改到前端时还要通过 `pnpm -C web build` 和 `pnpm -C web test`；
   - 任务"验证"一节的命令全部执行过，结果写进回复或提交说明；
   - 在回复中给出建议的提交信息（Conventional Commits，例如 `feat(order): place order saga (P5-T03)`），每个任务对应一个提交。
 - **所有 git 提交操作都由用户手动完成**。绝对不要执行 `git add`、`git commit`、`git push`，也不要执行其他会改动暂存区或提交历史的命令。

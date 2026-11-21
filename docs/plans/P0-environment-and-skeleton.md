@@ -57,9 +57,11 @@ git status && tree -L 2 -a -I '.git'
 预期：目录结构与上述一致；`.env.local` 被忽略（创建一个空文件后 `git status` 不显示）。
 
 **Checklist：**
-- [ ] `.gitignore` 忽略 `.env.local`
-- [ ] design.md、plan.md、plans/ 已放入 `docs/`
-- [ ] 已给出首个提交的建议提交信息（由用户手动提交）
+- [x] `.gitignore` 忽略 `.env.local`
+- [x] design.md、plan.md、plans/ 已放入 `docs/`
+- [x] 已给出首个提交的建议提交信息（由用户手动提交）
+
+**说明：** Git 不跟踪空目录，所以 `docs/verification/`、`deploy/compose/`、`http/`、`.run/` 里放了 `.gitkeep`，等目录里有真实文件后再删。本机没有装 `tree`，验证时可以 `brew install tree`，或者用 `find . -maxdepth 2 -not -path './.git*' | sort` 代替。
 
 ---
 

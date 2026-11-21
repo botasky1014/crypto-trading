@@ -3,6 +3,8 @@
 .env.*.local
 *.local.yaml
 *.local.yml
+# IntelliJ HTTP Client private environment (tokens, secrets)
+http-client.private.env.json
 
 # ---- Gradle ----
 .gradle/

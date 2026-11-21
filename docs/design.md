@@ -1047,6 +1047,11 @@ ssh -N \
 
 ```text
 crypto-trading/
+├── README.md                            # 项目介绍、文档索引、快速开始
+├── .editorconfig                        # UTF-8、LF；Java 4 空格，前端 2 空格
+├── .run/                                # 共享的 IntelliJ 运行配置（随代码提交）
+├── http/                                # IntelliJ HTTP Client 请求文件
+├── scripts/                             # doctor.sh、dev.sh
 ├── settings.gradle
 ├── build.gradle
 ├── gradle.properties
@@ -1105,7 +1110,8 @@ crypto-trading/
     │   ├── P9-cloud-native.md
     │   └── P10-upgrade.md
     ├── setup/                           # 环境准备
-    │   └── macros.md                    # macOS本机环境准备
+    │   └── macos.md                     # macOS 本机环境准备
+    ├── verification/                    # 验证记录（兼容性、内存实测、关键假设）
     ├── plan.md                          # 实现计划总览
     └── design.md                        # 系统设计
 ```

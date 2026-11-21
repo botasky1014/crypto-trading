@@ -1,0 +1,32 @@
+# https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Java / Gradle / Groovy / Kotlin / Proto / Avro / SQL
+[*.{java,gradle,groovy,kt,kts,proto,avsc,sql,properties}]
+indent_size = 4
+
+# Frontend (web/) and config files
+[*.{js,cjs,mjs,ts,tsx,vue,css,scss,html,json,jsonc}]
+indent_size = 2
+
+[*.{yml,yaml,toml,xml}]
+indent_size = 2
+
+[*.{sh,bash}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+# Two trailing spaces are a Markdown line break
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
