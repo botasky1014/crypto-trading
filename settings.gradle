@@ -1,0 +1,26 @@
+pluginManagement {
+    // Convention plugins (crypto-trading.*) live in the included build `build-logic`.
+    includeBuild('build-logic')
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    // Auto-provisions the JDK toolchain (Temurin 25) when it is not installed locally.
+    // Version source: https://plugins.gradle.org/plugin/org.gradle.toolchains.foojay-resolver-convention
+    // (the settings plugins block cannot read the version catalog, so the version is pinned here).
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'crypto-trading'
+
+include 'platform'

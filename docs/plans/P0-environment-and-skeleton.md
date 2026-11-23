@@ -7,7 +7,7 @@
 **阶段结束时能看到：**
 - `./gradlew build` 全部通过；
 - Nacos 控制台中看到示例服务 `hello` 已注册，修改 Nacos 配置后服务实时生效；
-- Grafana（http://localhost:3000）"服务实例"大盘中看到 `hello` 的 JVM 内存、GC、线程数。
+- Grafana（http://localhost:3000）"服务实例"大盘（英文标题 `Service Instances`）中看到 `hello` 的 JVM 内存、GC、线程数。
 
 **需要的 Compose profile：** `core`、`obs`
 
@@ -74,7 +74,7 @@ git status && tree -L 2 -a -I '.git'
 - `settings.gradle`：`includeBuild('build-logic')`；启用 foojay-resolver 插件；`include` 暂时只有 `platform`。
 - `gradle.properties`：开启构建缓存、配置缓存、并行构建；JVM 内存参数适配 16GB 机器（`-Xmx2g`）。
 - `gradle/libs.versions.toml`：Spring Boot 4.1.x、Spring Cloud 2025.1.x、Spring Cloud Alibaba 2025.1.0.0、MyBatis-Plus（Boot 4 starter）、以及本阶段用到的插件版本。全部取各自**当前最新稳定版**，并在文件中注释版本来源（Maven Central 或官方发布页）。
-- `platform/build.gradle`（`java-platform`）：导入 Boot、Spring Cloud、SCA、MyBatis-Plus 四个 BOM。**Spring Cloud BOM 放在 SCA BOM 之前**，确保使用 2025.1.x 最新版。
+- `platform/build.gradle`（`java-platform`）：导入 Boot、Spring Cloud、SCA、MyBatis-Plus 四个 BOM，确保 Spring Cloud 使用 2025.1.x 最新版。注意：Gradle 的 `platform(...)` 与 Maven 不同，**BOM 的书写顺序不影响结果**，同一个库有多个版本时默认选最高的。所以要检查的是实际解析出的版本（用 `dependencyInsight`），而不是 BOM 的顺序；需要强制版本时用 `enforcedPlatform(...)` 或 `strictly`。
 - `build-logic`（Groovy 预编译脚本插件）：
   - `crypto-trading.java-conventions`：Java Toolchain 25（Temurin）、`-parameters`、UTF-8、依赖 `platform`。
   - `crypto-trading.spring-service`：在 java-conventions 基础上应用 Spring Boot 插件。
@@ -85,7 +85,7 @@ git status && tree -L 2 -a -I '.git'
 **验证：**
 ```bash
 ./gradlew build
-./gradlew :platform:dependencies --configuration apiElements | head -40
+./gradlew :platform:dependencies --configuration classpath | head -40
 ./gradlew javaToolchains
 ```
 预期：构建成功；依赖输出中 Spring Boot 为 4.1.x、Spring Cloud 为 2025.1.x；Toolchain 列表中有 Temurin 25。
@@ -93,11 +93,19 @@ git status && tree -L 2 -a -I '.git'
 **停止条件：** 任一 BOM 的目标版本在 Maven Central 不存在，或 SCA BOM 强制把 Spring Cloud 降级。
 
 **Checklist：**
-- [ ] Wrapper 版本 ≥ 9.1
-- [ ] 版本目录中每个版本都注明来源
-- [ ] 三个约定插件可被子项目应用
-- [ ] `platform` 中 Spring Cloud 版本为 2025.1.x 最新
-- [ ] `./gradlew build` 通过，配置缓存无警告
+- [x] Wrapper 版本 ≥ 9.1
+- [x] 版本目录中每个版本都注明来源
+- [x] 三个约定插件可被子项目应用
+- [x] `platform` 中 Spring Cloud 版本为 2025.1.x 最新
+- [x] `./gradlew build` 通过，配置缓存无警告
+
+**说明（2026-11-21 完成时）：**
+- 选定版本：Gradle 9.9.2（Wrapper 带 `distributionSha256Sum` 校验）、Spring Boot 4.1.3、Spring Cloud 2025.1.5、Spring Cloud Alibaba 2025.1.0.0、MyBatis-Plus 3.5.18.1、foojay-resolver 1.0.0。start.spring.io 显示 Spring Cloud 2025.1.x 兼容 Boot `>=4.0.0 and <4.2.0-M1`。
+- 验证命令原来写的是 `--configuration apiElements`。`java-platform` 的 `apiElements` 是只供消费的配置，报告里显示 "No dependencies"，所以改用可解析的 `classpath`。
+- 子项目里实际解析出的 `spring-cloud-commons` 是 5.0.5，和 Spring Cloud 2025.1.5 BOM 声明的一致，说明 SCA BOM 没有把 Spring Cloud 降级。（SCA 2025.1.0.0 的 BOM 本身也没有导入 Spring Cloud BOM；而且按 Gradle 的规则，它就算写了旧版本也会输给更高的版本。）JUnit 6.0.3 由 Boot BOM 管理。
+- 本阶段 `settings.gradle` 只 include 了 `platform`。约定插件是用一个临时子项目验证的：同时应用三个插件，引入 Nacos Discovery 和 MyBatis-Plus starter，`build integrationTest` 通过，测试运行在 Temurin 25 上。临时子项目验证完已删除。
+- `spring-service` 同时应用了 `java-conventions` 和 `test-conventions`，服务模块只写 `id 'crypto-trading.spring-service'` 就行。库模块按需应用 `java-conventions`，要测试的话再加 `test-conventions`。
+- Gradle Daemon 用本机默认的 JDK 运行（本机是 JDK 27，Gradle 9.8 起支持）。编译和测试一律走 Toolchain（Temurin 25），首次构建时由 foojay 自动下载。
 
 ---
 
@@ -147,9 +155,9 @@ scripts/dev.sh stats
 **实现要点：**
 - `libs/common-core`：
   - 金额工具 `Money` / `Decimals`：基于 `BigDecimal`，提供按"最小单位"舍入（向下）、比较、校验非负；单元测试覆盖舍入边界。
-  - 统一错误码枚举基类和业务异常基类。
+  - 统一错误码枚举基类和业务异常基类。错误码是稳定的英文大写下划线编码，异常信息只用英文；后端不做国际化，由前端按错误码翻译（design.md 12.4）。
 - `libs/common-web`：
-  - 全局异常处理，统一返回 RFC 9457 Problem Details（含 `code`、`traceId` 字段）。
+  - 全局异常处理，统一返回 RFC 9457 Problem Details（含 `code`、`traceId` 字段；`title`、`detail` 只用英文）。
   - Jackson 3 配置：`BigDecimal` 序列化为字符串、不使用科学计数法；时间为 ISO-8601 UTC。
   - API 版本化配置（请求头 `API-Version`）。
 - `libs/architecture-rules`：用 ArchUnit 实现 design.md 11.2 的通用规则（调用方向、`@Transactional` 只在 `service.impl`、`model` 纯净、禁止 `double`/`float` 表示金额字段——按字段名 `amount|qty|price|notional|balance|fee` 判断），提供给各服务的测试直接引用。
@@ -216,7 +224,7 @@ curl -s localhost:8090/hello
 - `hello` 依赖该库。
 - Compose `obs` profile 本阶段只包含 **Prometheus 和 Grafana**（其余组件在 P8 加入），内存限制按 design.md 10.1。
 - Prometheus 使用 `file_sd`：`deploy/compose/prometheus/targets/services.json` 列出 `host.docker.internal:<端口>`；本阶段只有 hello。
-- Grafana 预置：Prometheus 数据源；"服务实例"大盘 v0（按服务选择：JVM 堆 / 非堆、GC 次数与耗时、线程数、CPU、HTTP 请求量与延迟）。大盘 JSON 放在 `deploy/grafana/dashboards/`。
+- Grafana 预置：Prometheus 数据源；"服务实例"大盘 v0（标题 `Service Instances`，面板名全部英文；按服务选择：JVM 堆 / 非堆、GC 次数与耗时、线程数、CPU、HTTP 请求量与延迟）。大盘 JSON 放在 `deploy/grafana/dashboards/`。
 - Grafana 本阶段使用本地管理员账号（P1-T08 改为 Keycloak 单点登录）。
 
 **产出：** `libs/common-observability`、Compose `obs`、`deploy/compose/prometheus/`、`deploy/grafana/`
@@ -228,7 +236,7 @@ scripts/dev.sh up core obs
 curl -s localhost:8090/actuator/prometheus | head
 for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 ```
-浏览器：http://localhost:9090/targets 中 hello 为 UP；http://localhost:3000 打开"服务实例"大盘，看到 hello 的 JVM 指标和刚才 50 次请求。
+浏览器：http://localhost:9090/targets 中 hello 为 UP；http://localhost:3000 打开"服务实例"大盘（`Service Instances`），看到 hello 的 JVM 指标和刚才 50 次请求。
 
 **Checklist：**
 - [ ] Prometheus 目标为 UP
@@ -246,18 +254,21 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 - 在 `crypto-trading.java-conventions` 中加入：Spotless（Palantir Java Format）、Error Prone + NullAway（以 JSpecify 注解为准，只检查 `com.cryptotrading` 包）、JaCoCo（`test` 和 `integrationTest` 合并报告）。
 - Lombok 与 MapStruct 注解处理器及 `lombok-mapstruct-binding` 的配置也放在这里（本阶段还没有使用，配置好即可）。
 - `./gradlew build` 包含 `spotlessCheck`。
+- 中文检查（design.md 12.4）：`scripts/check-no-chinese.sh` 扫描 `git ls-files` 列出的全部文件，发现中文字符（CJK 统一表意文字和中文标点）就打印"文件:行号"并以非 0 退出。例外只有 `*.md` 和 `web/src/locales/zh-CN.*`。根项目注册 `checkNoChinese` 任务调用该脚本，并挂到 `check` 上，使 `./gradlew build` 包含此检查；CI 随 `build` 一起执行。
 
-**产出：** 更新后的 `build-logic`
+**产出：** 更新后的 `build-logic`、`scripts/check-no-chinese.sh`、根 `build.gradle`
 
 **验证：**
 1. 故意在 hello 中写一段格式错误的代码，`./gradlew build` 失败并提示运行 `spotlessApply`；运行后通过。
 2. 故意写一个可能返回 null 却未标注的方法，NullAway 报错；修复后通过。
 3. `./gradlew jacocoTestReport` 生成报告，打开 `build/reports/jacoco/` 查看。
+4. 故意在 hello 的注释里写一个中文字符，`./gradlew build` 失败并指出文件和行号；删除后通过。
 
 **Checklist：**
 - [ ] 格式错误会导致构建失败
 - [ ] NullAway 生效
 - [ ] 覆盖率报告可生成
+- [ ] 中文检查生效（`zh-CN` 语言包和 Markdown 除外）
 - [ ] 验证用的错误代码已删除
 
 ---

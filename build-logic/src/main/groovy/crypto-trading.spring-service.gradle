@@ -1,0 +1,6 @@
+// Conventions for a runnable Spring Boot service (services/*, tools/alpaca-mock).
+plugins {
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+    id 'org.springframework.boot'
+}

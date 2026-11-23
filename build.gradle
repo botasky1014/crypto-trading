@@ -1,0 +1,5 @@
+// Root project: no code of its own. Shared build logic lives in build-logic/ convention plugins,
+// dependency versions in gradle/libs.versions.toml and platform/.
+plugins {
+    id 'base'
+}

@@ -1,0 +1,22 @@
+// Version platform: every module depends on it, so all modules share one set of versions.
+plugins {
+    id 'java-platform'
+}
+
+javaPlatform {
+    // Allows importing other BOMs (platforms) into this one.
+    allowDependencies()
+}
+
+dependencies {
+    // Declaration order does NOT matter in Gradle (unlike Maven's "first import wins"):
+    // all BOM entries are constraints, and conflict resolution picks the HIGHEST version.
+    // So the SCA BOM cannot downgrade Spring Cloud. If a version ever has to be forced,
+    // use enforcedPlatform(...) or a `strictly` constraint instead of relying on order.
+    // Check the resolved versions with e.g.
+    //   ./gradlew :<module>:dependencyInsight --dependency spring-cloud-commons
+    api platform(libs.spring.boot.dependencies)
+    api platform(libs.spring.cloud.dependencies)
+    api platform(libs.spring.cloud.alibaba.dependencies)
+    api platform(libs.mybatis.plus.bom)
+}

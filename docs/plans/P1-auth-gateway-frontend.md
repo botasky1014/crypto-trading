@@ -26,6 +26,7 @@
   - Client `web`：public client，授权码 + PKCE，回调地址 `http://localhost:5173/*`、`http://localhost:8080/swagger-ui/*`、IntelliJ HTTP Client 回调地址；Web Origins 对应设置。
   - Client `grafana`：confidential client，回调 `http://localhost:3000/login/generic_oauth`，令牌中包含 realm 角色。
   - 访问令牌 5 分钟，刷新令牌 30 分钟。
+  - 开启 realm 国际化：支持 `en`、`zh-CN`，默认 `en`；登录 / 注册页可切换语言，并根据前端传入的 `ui_locales` 参数显示对应语言（design.md 12.4）。使用 Keycloak 自带的翻译，不在仓库中写中文。
   - 预置两个**仅本地开发用**的账号：`admin`（角色 admin + user）、`alice`（角色 user）；初始密码从 `.env.local` 读取，导入脚本替换占位符。
 - `scripts/keycloak-export.sh`：在控制台修改 realm 后导出为 JSON，方便回写仓库。
 
@@ -158,9 +159,13 @@ curl -i localhost:8080/api/me                       # 401
 **实现要点：**
 - `web/`：Vite 8 + Vue 3.5 + TypeScript + pnpm。目录按 design.md 12.1（`modules/`、`shared/`、`locales/`、`router/`、`styles/`）。
 - Tailwind CSS 4 + shadcn-vue（Reka UI）；`styles/tokens.css` 定义设计令牌：主色蓝、中性灰阶、涨跌色（按偏好切换红涨绿跌 / 绿涨红跌）、圆角（卡片 16px、按钮全圆角）、间距 4 的倍数；亮 / 暗两套主题；字体 Inter，数字使用 `tabular-nums`。视觉参考 Coinbase 风格，**不使用 Coinbase 的名称、Logo、字体**。
-- vue-i18n：`zh-CN`、`en-US`，默认跟随浏览器语言；登录后以服务端偏好为准。
+- vue-i18n：`zh-CN`、`en-US`，默认跟随浏览器语言；登录后以服务端偏好为准。规则见 design.md 12.4：
+  - 所有页面的文案（菜单、按钮、表单校验、提示、空状态、错误信息、图表标题）都走语言包，组件里不写任何文案；数字、金额、日期用 `Intl` 按当前语言格式化。
+  - 中文只能出现在 `web/src/locales/zh-CN.*`；`.vue`、`.ts`、测试和注释里只用英文。
+  - 语言包的 key 用英文点号分层（如 `nav.market`、`errors.INSUFFICIENT_PLATFORM_FUNDS`）；加一个测试校验 `zh-CN` 与 `en-US` 的 key 完全一致。
+  - 跳转 Keycloak 登录时带上 `ui_locales`，让登录页与当前语言一致。
 - 认证：oidc-client-ts，授权码 + PKCE，静默续期；路由守卫；未登录访问受保护页面时跳转登录。
-- HTTP 客户端：自动带令牌，401 时尝试续期一次，错误按 Problem Details 显示。
+- HTTP 客户端：自动带令牌，401 时尝试续期一次；错误按 Problem Details 的 `code` 到语言包中取文案（`errors.<code>`），找不到时显示通用错误提示并附 `traceId`。
 - Pinia（用户、偏好）+ TanStack Query（服务端数据）。
 - 页面：顶部导航（Logo 用项目自己的文字标识、行情、交易、资产、订单、策略、设置；未实现的页面显示"即将推出"）、首页占位、设置页（个人信息、语言、主题、涨跌颜色，修改后调用 `PUT /api/me/preferences`）。
 - 工具：ESLint + Prettier；Vitest + Vue Test Utils + MSW（模拟 `/api/me`）。
@@ -176,13 +181,14 @@ pnpm -C web dev
 ```
 浏览器打开 http://localhost:5173：
 1. 点击登录 → Keycloak 注册新用户 → 回到首页，右上角显示用户名。
-2. 设置页切换英文、暗色、绿涨红跌，刷新页面后保持。
+2. 设置页切换英文、暗色、绿涨红跌，刷新页面后保持；切换语言后所有页面（含导航、"即将推出"占位、错误提示）都变成对应语言，登录页也跟着变。
 3. 退出登录后访问设置页，自动跳到登录。
 
 **Checklist：**
 - [ ] 目录结构符合 design.md 12.1
 - [ ] 登录、退出、静默续期可用
-- [ ] 中英文切换完整（无硬编码文案）
+- [ ] 中英文切换完整（无硬编码文案），`zh-CN` 与 `en-US` 的 key 一致性测试通过
+- [ ] 除 `web/src/locales/zh-CN.*` 外，`web/` 中没有中文（`scripts/check-no-chinese.sh` 通过）
 - [ ] 亮 / 暗主题、涨跌颜色切换生效并持久化到服务端
 - [ ] 单元测试通过，构建无警告
 

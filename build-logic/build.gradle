@@ -1,0 +1,9 @@
+// Groovy precompiled script plugins: src/main/groovy/<plugin-id>.gradle
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+dependencies {
+    // Makes `id 'org.springframework.boot'` resolvable inside the convention plugins.
+    implementation libs.spring.boot.gradle.plugin
+}

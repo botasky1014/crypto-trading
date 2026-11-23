@@ -1,0 +1,30 @@
+// Base conventions for every Java module: JDK 25 (Temurin) toolchain, compiler flags,
+// and the shared version platform.
+plugins {
+    id 'java'
+}
+
+def catalog = extensions.getByType(VersionCatalogsExtension).named('libs')
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(catalog.findVersion('java').get().requiredVersion)
+        vendor = JvmVendorSpec.ADOPTIUM
+    }
+}
+
+dependencies {
+    // annotationProcessor does not extend implementation, so it gets the platform too.
+    implementation platform(project(':platform'))
+    annotationProcessor platform(project(':platform'))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    // Keep parameter names (Spring MVC / MyBatis binding without @Param on every argument).
+    options.compilerArgs.add('-parameters')
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+}

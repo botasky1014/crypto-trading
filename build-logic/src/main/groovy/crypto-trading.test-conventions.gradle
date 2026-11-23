@@ -1,0 +1,40 @@
+// Test conventions: JUnit Platform, with two JVM Test Suites.
+//   test            — fast unit tests, run by `./gradlew build`
+//   integrationTest — Testcontainers-based tests, run by `./gradlew integrationTest`
+// (`contractTest` is added in P5.)
+plugins {
+    id 'crypto-trading.java-conventions'
+    id 'jvm-test-suite'
+}
+
+testing {
+    suites {
+        configureEach {
+            // No version given: JUnit versions come from the Spring Boot BOM via the platform.
+            useJUnitJupiter()
+            dependencies {
+                implementation platform(project(':platform'))
+            }
+        }
+
+        test {
+        }
+
+        integrationTest(JvmTestSuite) {
+            dependencies {
+                implementation project()
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(tasks.named('test'))
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(Test).configureEach {
+    // Memory-friendly defaults for a 16GB machine.
+    maxHeapSize = '1g'
+    maxParallelForks = 1
+}

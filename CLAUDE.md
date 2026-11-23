@@ -16,7 +16,7 @@
 - 碰到任务的**停止条件**必须停下，整理现象、可选方案和推荐方案，交给用户决定。
 - **一次只做一个任务**，按编号顺序做，做完整个 checklist 再开始下一个。
 - 每个任务结束时：
-  - `./gradlew build` 通过（含单元测试、ArchUnit、Spotless；P0-T03 建好 Gradle 骨架之前不适用）；改到前端时还要通过 `pnpm -C web build` 和 `pnpm -C web test`；
+  - `./gradlew build` 通过（含单元测试、ArchUnit、Spotless；ArchUnit 在 P0-T05 接入，Spotless 在 P0-T08 接入）；改到前端时还要通过 `pnpm -C web build` 和 `pnpm -C web test`；
   - 任务"验证"一节的命令全部执行过，结果写进回复或提交说明；
   - 在回复中给出建议的提交信息（Conventional Commits，例如 `feat(order): place order saga (P5-T03)`），每个任务对应一个提交。
 - **所有 git 提交操作都由用户手动完成**。绝对不要执行 `git add`、`git commit`、`git push`，也不要执行其他会改动暂存区或提交历史的命令。
@@ -28,6 +28,7 @@
 
 - 本机是 Apple 芯片 Mac，16GB 内存。只启动当前任务需要的 Compose profile，所有镜像都要支持 `linux/arm64`。
 - JDK 25（Temurin，由 Gradle Toolchain 管理）；Gradle 9.x，Groovy DSL；Node LTS + pnpm。
+- 版本只在 `gradle/libs.versions.toml` 里定义，每个版本都要注明来源；子项目依赖不写版本，统一由 `platform` 管理。模块通过 `build-logic` 的约定插件构建：服务用 `crypto-trading.spring-service`，库用 `crypto-trading.java-conventions`（需要测试时再加 `crypto-trading.test-conventions`）。
 
 ## 常用命令
 
@@ -53,4 +54,9 @@
   - `model` 不依赖 service、controller、mapper；
   - 金额、数量、价格**禁止用 `double`/`float`**，全程用 `BigDecimal`；
   - 服务之间不共享 entity，只通过 `libs` 里的契约（Avro、Protobuf、DTO）交互。
+- **多语言与代码语言**（design.md 12.4）：
+  - 前端所有页面必须支持中英文切换，文案全部走 vue-i18n，不硬编码。
+  - 代码里只能用英文，不能出现任何中文：注释、日志、异常信息、配置、脚本、SQL、测试名和测试数据都算代码。唯一例外是 `web/src/locales/zh-CN.*` 语言包；Markdown 文档不算代码，继续用中文。
+  - 后端不做国际化，只返回英文错误码（Problem Details 的 `code`、风控 `rule` 等），由前端翻译。
+  - P0-T08 起 `./gradlew build` 会用 `scripts/check-no-chinese.sh` 检查。
 - 服务间通信：order 调 risk 用 gRPC；同步调用用 REST（HTTP Interface + LoadBalancer）；事件走 Kafka（Avro）。内部接口的路径前缀是 `/internal`，gateway 不路由这些接口。

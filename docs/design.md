@@ -186,7 +186,7 @@ flowchart LR
 1. 用户在 Keycloak 登录页自助注册（默认角色 `user`）。
 2. 前端登录后首先调用 `GET /api/me`。account 发现该用户（JWT `sub`）尚无档案时，**幂等地**创建档案，并调用 ledger `POST /internal/accounts/{userId}/provision`。
 3. ledger 在一个事务中：创建用户各资产余额行，从 `PLATFORM` 划拨 1,000 USD（金额配置在 Nacos `ledger.yaml`）。
-4. `PLATFORM` 的 USD 不足时：用户档案照常创建、余额为 0，返回"平台资金不足，请联系管理员"，并触发告警。管理员可在后台补发（`POST /api/admin/users/{id}/funds`）。
+4. `PLATFORM` 的 USD 不足时：用户档案照常创建、余额为 0，返回英文状态码 `fundingStatus = INSUFFICIENT_PLATFORM_FUNDS`（前端按状态码显示"平台资金不足，请联系管理员"或对应英文，见 12.4），并触发告警。管理员可在后台补发（`POST /api/admin/users/{id}/funds`）。
 5. 全过程记审计：`ACCOUNT_PROVISION`（成功或失败）。
 
 #### 5.1.2 自助重置
@@ -473,8 +473,8 @@ message CheckRequest {
 }
 message CheckResponse {
   bool passed = 1;
-  string rule = 2;
-  string message = 3;
+  string rule = 2;                // R01–R07；前端按规则编码显示中英文原因
+  string message = 3;             // 英文说明，只用于日志和排查
 }
 ```
 
@@ -741,7 +741,7 @@ sequenceDiagram
 | GET | `/api/admin/platform` | ledger | PLATFORM 资金池余额、已分配总额、对账状态 |
 | POST | `/api/admin/reconcile-diffs/{id}/confirm` | ledger | 确认对账差异并调账（必填原因） |
 
-约定：交易对在路径中写作 `BTC-USD`；金额、数量用字符串；错误响应为 RFC 9457 Problem Details；API 版本化使用 Spring Framework 7 内置版本化（请求头 `API-Version`）。
+约定：交易对在路径中写作 `BTC-USD`；金额、数量用字符串；错误响应为 RFC 9457 Problem Details，其中 `code` 是稳定的英文错误码（大写下划线，例如 `INSUFFICIENT_PLATFORM_FUNDS`），`title` / `detail` 只用英文；后端不做国际化，前端按 `code` 显示中英文文案（12.4）；API 版本化使用 Spring Framework 7 内置版本化（请求头 `API-Version`）。
 
 ### 7.2 内部接口（路径前缀 `/internal`，gateway 不路由）
 
@@ -834,19 +834,19 @@ flowchart LR
     AUDDB[(audit_log)] -- PostgreSQL 数据源（只读账号） --> G
 ```
 
-**大盘清单（JSON 存放在 `deploy/grafana/dashboards/`，启动时自动导入）：**
+**大盘清单（JSON 存放在 `deploy/grafana/dashboards/`，启动时自动导入）：** 大盘 JSON 属于代码，标题、面板名一律用英文（下表"英文标题"列）；告警规则文件同样只用英文。
 
-| 大盘 | 主要面板 |
-| --- | --- |
-| 总览 | 各服务请求量（QPS）、错误率、P50 / P99 延迟；今日下单数、成交笔数、成交额；注册用户数、在线用户数、WebSocket 连接数；当前告警 |
-| 交易 | 下单数 / 成交笔数 / 成交额（按交易对、类型、来源：手动 / 策略 / 重置）；订单状态分布；拒单原因 Top；下单延迟；UNKNOWN 订单数；Alpaca 调用耗时；全局与用户令牌桶命中 |
-| 平台资金 | PLATFORM 资金池余额、已分配总额、可再开户数；对账差异；手续费估算与实际差额；不变式巡检结果；重置次数 |
-| 行情 | 各交易对消息速率；端到端延迟；Leader 所在实例与切换记录；订单簿校验失败；推送合并比例 |
-| 服务实例 | 按服务和 Pod：CPU、内存、JVM 堆 / 非堆、GC、线程数（含虚拟线程）、连接池使用率、启动时间、重启次数 |
-| 弹性伸缩 | 每个服务当前副本数、目标副本数、触发扩容的指标值与阈值 |
-| 服务器 / 集群 | 节点 CPU、内存、磁盘、网络；Pod 状态；未调度 Pod |
-| 中间件 | Kafka（吞吐、消费积压）、PostgreSQL（连接、慢查询）、Redis（命中率、内存）、Nacos、Keycloak |
-| 审计 | 审计事件数（按动作、结果）；最近的失败 / 拒绝操作；管理员操作列表；各分区哈希链校验状态；Keycloak 注册与登录失败趋势 |
+| 大盘 | 英文标题 | 主要面板 |
+| --- | --- | --- |
+| 总览 | Overview | 各服务请求量（QPS）、错误率、P50 / P99 延迟；今日下单数、成交笔数、成交额；注册用户数、在线用户数、WebSocket 连接数；当前告警 |
+| 交易 | Trading | 下单数 / 成交笔数 / 成交额（按交易对、类型、来源：手动 / 策略 / 重置）；订单状态分布；拒单原因 Top；下单延迟；UNKNOWN 订单数；Alpaca 调用耗时；全局与用户令牌桶命中 |
+| 平台资金 | Platform Funds | PLATFORM 资金池余额、已分配总额、可再开户数；对账差异；手续费估算与实际差额；不变式巡检结果；重置次数 |
+| 行情 | Market Data | 各交易对消息速率；端到端延迟；Leader 所在实例与切换记录；订单簿校验失败；推送合并比例 |
+| 服务实例 | Service Instances | 按服务和 Pod：CPU、内存、JVM 堆 / 非堆、GC、线程数（含虚拟线程）、连接池使用率、启动时间、重启次数 |
+| 弹性伸缩 | Autoscaling | 每个服务当前副本数、目标副本数、触发扩容的指标值与阈值 |
+| 服务器 / 集群 | Nodes & Cluster | 节点 CPU、内存、磁盘、网络；Pod 状态；未调度 Pod |
+| 中间件 | Middleware | Kafka（吞吐、消费积压）、PostgreSQL（连接、慢查询）、Redis（命中率、内存）、Nacos、Keycloak |
+| 审计 | Audit | 审计事件数（按动作、结果）；最近的失败 / 拒绝操作；管理员操作列表；各分区哈希链校验状态；Keycloak 注册与登录失败趋势 |
 
 从任一面板可以通过 Exemplar 跳转到 Trace，再从 Trace 跳转到日志。
 
@@ -1230,7 +1230,7 @@ web/src/
 - 亮 / 暗两套主题。
 - 字体 Inter（中文回退系统字体），数字 `font-variant-numeric: tabular-nums`。
 - **默认红涨绿跌**，设置中可切换为绿涨红跌；偏好保存在服务端（`/api/me/preferences`）。
-- 中英双语（vue-i18n），默认跟随浏览器语言。
+- 中英双语（vue-i18n），默认跟随浏览器语言，详见 12.4。
 
 ### 12.3 状态与实时数据
 
@@ -1239,6 +1239,15 @@ web/src/
 - 推送数据先写入非响应式缓冲区，`requestAnimationFrame` 每帧合并一次再写入 `shallowRef`。
 - 金额计算用 decimal.js，展示用 `Intl.NumberFormat` 并按资产精度截断。
 - 类型从 gateway 聚合的 OpenAPI 文档生成（openapi-typescript）。
+
+### 12.4 多语言与代码语言
+
+- **前端所有页面必须支持中英文切换**（`zh-CN`、`en-US`）：菜单、按钮、表单校验、提示、空状态、错误信息、图表标题和图例都走 vue-i18n，不允许硬编码文案。数字、金额、日期按当前语言用 `Intl` 格式化。
+- 语言在设置页切换，偏好保存在服务端（`/api/me/preferences`）；未登录时跟随浏览器语言。Keycloak 登录 / 注册页也开启中英文（realm 国际化）。
+- **代码里只能用英文，不能出现任何中文**：前端、后端、脚本、配置（YAML、JSON、Nacos 初始配置）、SQL / Flyway、Proto / Avro、Grafana 大盘与告警、`.http`、运行配置，包括注释、日志、异常信息、测试名和测试数据。
+- **唯一例外**是前端中文语言包 `web/src/locales/zh-CN.*`：只放翻译文本，不写逻辑。Markdown 文档（`docs/`、`README.md`、`CLAUDE.md`）不算代码，继续用中文。
+- 后端不做国际化：返回给用户的错误只给英文错误码（Problem Details 的 `code`、风控的 `rule`、订单的拒单原因码），前端按码在语言包中取文案（例如 `errors.INSUFFICIENT_PLATFORM_FUNDS`、`risk.R04`）；找不到对应文案时显示通用错误提示，并带上 `traceId`。
+- 由构建检查强制（P0-T08）：除上述例外，仓库中被跟踪的文件出现中文字符时 `./gradlew build` 失败。
 
 ---
 
@@ -1379,7 +1388,7 @@ web/src/
 | 技术栈 | Vue 3.5 + TypeScript + Vite + Tailwind CSS 4 + shadcn-vue |
 | 视觉风格 | 参考 Coinbase 风格，不使用其品牌资产 |
 | 涨跌颜色 | 默认红涨绿跌，可在设置中切换 |
-| 语言 | 中英双语 |
+| 语言 | 前端中英双语，所有页面可切换；代码只用英文（中文只出现在 `zh-CN` 语言包和 Markdown 文档中）；后端只返回英文错误码，由前端翻译 |
 
 ### A.5 术语
 
