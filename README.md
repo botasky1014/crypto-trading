@@ -22,14 +22,23 @@
    scripts/doctor.sh
    ```
 
-3. 后续的构建、中间件和服务启动命令随各阶段逐步加入，见 [docs/plan.md](docs/plan.md) 第 5 节。
+3. 构建，并启动本地中间件（PostgreSQL、Redis、Nacos、Vault）：
+
+   ```bash
+   ./gradlew build
+   scripts/dev.sh up core
+   ```
+
+   首次运行会在 `.env.local` 中生成本地密码。Nacos 控制台：http://localhost:8849（用户 `nacos`，密码见 `.env.local` 的 `NACOS_ADMIN_PASSWORD`）。
+
+4. 其他命令见 [docs/plan.md](docs/plan.md) 第 5 节。
 
 ## 目录
 
 | 目录 | 用途 |
 | --- | --- |
 | `docs/` | 设计、计划、环境准备、验证记录 |
-| `scripts/` | 开发脚本（`doctor.sh`，以及后续的 `dev.sh`） |
+| `scripts/` | 开发脚本（`doctor.sh`、`dev.sh`） |
 | `deploy/compose/` | 本地 Docker Compose 中间件 |
 | `http/` | IntelliJ HTTP Client 请求文件（`*.http`） |
 | `.run/` | 共享的 IntelliJ 运行配置 |

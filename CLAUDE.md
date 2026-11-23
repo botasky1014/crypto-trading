@@ -20,7 +20,7 @@
   - 任务"验证"一节的命令全部执行过，结果写进回复或提交说明；
   - 在回复中给出建议的提交信息（Conventional Commits，例如 `feat(order): place order saga (P5-T03)`），每个任务对应一个提交。
 - **所有 git 提交操作都由用户手动完成**。绝对不要执行 `git add`、`git commit`、`git push`，也不要执行其他会改动暂存区或提交历史的命令。
-- **不提交密钥**。密钥只放在 `.env.local`（已加入 gitignore）或 Vault。
+- **不提交密钥**。密钥只放在 `.env.local`（已加入 gitignore）或 Vault。新增密钥时在 `.env.example` 里加一个空值的键，`scripts/dev.sh up` 会为缺少的键生成随机值。
 - 测试和 CI 一律连 **alpaca-mock**。只有任务里明确写了"连真实模拟盘"才连 Alpaca，同一时间只能有一个环境连着真实 Alpaca。系统禁止连接 live 环境。
 - P6 之前遇到重要数据修改，用 `// AUDIT: <动作编码>` 注释标出，P6-T04 时统一换成 `@Audited`。
 
@@ -35,7 +35,7 @@
 | 用途 | 命令 |
 | --- | --- |
 | 启动 / 停止中间件 | `scripts/dev.sh up core [mq] [obs] [mock]` / `scripts/dev.sh down` |
-| 查看容器内存 | `scripts/dev.sh stats` |
+| 查看容器状态 / 内存 | `scripts/dev.sh ps` / `scripts/dev.sh stats` |
 | 环境自检 | `scripts/doctor.sh` |
 | 构建与全部检查 | `./gradlew build` |
 | 集成测试 | `./gradlew integrationTest` |

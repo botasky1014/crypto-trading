@@ -114,37 +114,47 @@ git status && tree -L 2 -a -I '.git'
 **目标：** 一条命令启动 PostgreSQL（含 TimescaleDB）、Redis、Nacos、Vault。
 
 **实现要点：**
-- `deploy/compose/docker-compose.yml`，按 profile 组织；本任务只实现 `core`：PostgreSQL 18 + TimescaleDB、Redis 8、Nacos 3.x（单机模式，开启鉴权）、Vault（dev 模式）。Keycloak 在 P1 加入。
+- `deploy/compose/docker-compose.yml`，按 profile 组织；本任务只实现 `core`：PostgreSQL 18 + TimescaleDB、Redis 8、Nacos 3.x（单机模式，开启鉴权；控制台端口 8849）、Vault（dev 模式）。Keycloak 在 P1 加入。
 - 所有镜像固定到具体版本标签，并确认支持 `linux/arm64`。
 - 内存限制按 design.md 10.1：PostgreSQL `shared_buffers=128MB`、Redis `maxmemory 128mb`、Nacos 堆 384MB。
 - PostgreSQL 初始化脚本 `deploy/compose/postgres/init/`：创建各服务的数据库用户和 schema（account、market、order、ledger、strategy、audit、keycloak、apicurio），并启用 `timescaledb` 扩展（仅 market schema 使用）。
 - Nacos 使用 PostgreSQL 还是内置存储：使用 Nacos 单机模式内置存储（减少依赖）；数据目录挂载卷。
 - 所有服务都配置健康检查。
-- `scripts/dev.sh`：`up <profiles...>`、`down`、`stats`（`docker stats --no-stream`）、`logs <service>`、`reset`（删除卷，执行前要求确认）。
+- `scripts/dev.sh`：`up <profiles...>`、`down`、`ps`、`stats`（`docker stats --no-stream`）、`logs <service>`、`reset`（删除卷，执行前要求确认）。
+- 密码、令牌放在 `.env.local`：仓库提供 `.env.example` 列出所有键，`dev.sh up` 为缺少的键生成随机值，不改已有的值。
 
-**产出：** `deploy/compose/docker-compose.yml`、`deploy/compose/postgres/init/*.sql`、`scripts/dev.sh`
+**产出：** `deploy/compose/docker-compose.yml`、`deploy/compose/postgres/init/*.sh`、`scripts/dev.sh`、`.env.example`
 
 **验证：**
 ```bash
 scripts/dev.sh up core
-docker compose -f deploy/compose/docker-compose.yml ps        # 全部 healthy
-psql -h localhost -U postgres -c '\dn'                         # 看到各服务 schema
-psql -h localhost -U postgres -d crypto -c "select extversion from pg_extension where extname='timescaledb'"
+scripts/dev.sh ps                                                                   # 全部 healthy
+docker exec crypto-trading-postgres-1 psql -U postgres -d crypto -c '\dn'           # 看到各服务 schema
+docker exec crypto-trading-postgres-1 psql -U postgres -d crypto -c "select extversion from pg_extension where extname='timescaledb'"
 scripts/dev.sh stats
 ```
-浏览器打开 http://localhost:8848/nacos 登录控制台。
+浏览器打开 http://localhost:8849 登录 Nacos 控制台（用户 `nacos`，密码为 `.env.local` 中的 `NACOS_ADMIN_PASSWORD`）。
 
 预期：4 个容器全部 healthy；schema 齐全；TimescaleDB 扩展可用；总内存占用约 1.3GB 以内。
 
 **停止条件：** 找不到同时支持 PostgreSQL 18、TimescaleDB 和 arm64 的镜像；或 Nacos 3.x 没有 arm64 镜像。报告可选的替代版本。
 
 **Checklist：**
-- [ ] 镜像全部固定版本且为 arm64
-- [ ] 健康检查全部通过
-- [ ] 各服务数据库用户只能访问自己的 schema（用 `account` 用户访问 `order` schema 应被拒绝）
-- [ ] Nacos 控制台可登录
-- [ ] `dev.sh` 各子命令可用
-- [ ] 内存占用记录到 `docs/verification/memory.md`
+- [x] 镜像全部固定版本且为 arm64
+- [x] 健康检查全部通过
+- [x] 各服务数据库用户只能访问自己的 schema（用 `account` 用户访问 `order` schema 应被拒绝）
+- [x] Nacos 控制台可登录
+- [x] `dev.sh` 各子命令可用
+- [x] 内存占用记录到 `docs/verification/memory.md`
+
+**说明（2026-11-23 完成时）：**
+- 镜像：`timescale/timescaledb:2.32.1-pg18`（PostgreSQL 18.7；用非 `-oss` 版本，因为需要连续聚合）、`redis:8.8.4-alpine`、`nacos/nacos-server:v3.3.0`、`hashicorp/vault:2.2.2`，均有 `linux/arm64`。端口只绑定 `127.0.0.1`。
+- **Nacos 控制台端口改为 8849（已与用户确认）。** Nacos 3.x 把控制台拆成单独的应用，默认端口 8080，与 gateway 冲突；8848 只提供 API，打开 `/nacos` 只显示提示。已同步更新 plan.md §4 和 design.md 10.6。首次启动时 `dev.sh` 通过 API 设置 `nacos` 用户的密码（Nacos 3 没有默认密码）。
+- 初始化脚本是 `10-service-schemas.sh` 而不是 `.sql`：各服务用户的密码来自环境变量，需要用 psql 变量传入。脚本按文件单独挂载，因为镜像自带的 TimescaleDB 初始化脚本也在 `/docker-entrypoint-initdb.d/` 里。
+- 权限：每个服务用户只拥有自己的 schema，`search_path` 指向自己的 schema；`public` schema 只给 `market` 使用（TimescaleDB 扩展装在 `public`）；数据库 `crypto` 和 `postgres` 都收回了 PUBLIC 的 CONNECT。实测 `account` 访问 `order` schema、在 `public` 建表、连接 `postgres` 库都被拒绝；`market` 能创建超表。
+- Redis 使用 `noeviction`：令牌桶、锁、租约不能被悄悄淘汰。开启 AOF。
+- 验证命令原来用宿主机的 `psql`，本机没有安装，而且 `\dn` 没带 `-d crypto` 时看的是 `postgres` 库，所以改成 `docker exec` 进容器执行；`docker compose ps` 也改为 `dev.sh ps`（compose 文件要求的变量来自 `.env.local`）。
+- Nacos 内存比估算高约 10%，调优过程见 `docs/verification/memory.md`。
 
 ---
 

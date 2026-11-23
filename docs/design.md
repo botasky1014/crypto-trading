@@ -1031,12 +1031,12 @@ SSH 端口转发示例（端口在 P9 阶段确定）：
 ```bash
 # 8443：Envoy Gateway（前端、API、Keycloak）
 # 3000：Grafana
-# 8848：Nacos 控制台（运维）
+# 8849：Nacos 控制台（运维；Nacos 3 的控制台与 8848 API 分开）
 # 8080：Argo CD
 ssh -N \
   -L 8443:localhost:443 \
   -L 3000:localhost:3000 \
-  -L 8848:localhost:8848 \
+  -L 8849:localhost:8849 \
   -L 8080:localhost:8080 \
   ec2-user@<EC2 地址>
 ```

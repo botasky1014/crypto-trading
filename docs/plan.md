@@ -76,7 +76,7 @@
 | alpaca-mock | 8099（REST）/ 8098（WebSocket） |
 | PostgreSQL | 5432 |
 | Redis | 6379 |
-| Nacos | 8848（控制台与 API）/ 9848（gRPC） |
+| Nacos | 8848（API，路径 `/nacos`）/ 8849（控制台）/ 9848（gRPC） |
 | Keycloak | 8180 |
 | Vault | 8200 |
 | Kafka | 9092 |
