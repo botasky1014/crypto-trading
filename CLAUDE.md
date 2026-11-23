@@ -54,6 +54,9 @@
   - `model` 不依赖 service、controller、mapper；
   - 金额、数量、价格**禁止用 `double`/`float`**，全程用 `BigDecimal`；
   - 服务之间不共享 entity，只通过 `libs` 里的契约（Avro、Protobuf、DTO）交互。
+  - 规则在 `libs/architecture-rules`。每个服务都要在测试根包放一个 `class ArchitectureTest extends AbstractArchitectureTest {}`。
+- 金额舍入用 `common-core` 的 `Decimals.roundDown`（按最小单位向零截断），比较用 `Decimals.eq/gt/...`，不要用 `BigDecimal.equals`。
+- 业务错误：各服务定义 `enum XxxErrorCode implements ErrorCode`，抛出 `BusinessException`，由 `common-web` 统一转成 Problem Details。
 - **多语言与代码语言**（design.md 12.4）：
   - 前端所有页面必须支持中英文切换，文案全部走 vue-i18n，不硬编码。
   - 代码里只能用英文，不能出现任何中文：注释、日志、异常信息、配置、脚本、SQL、测试名和测试数据都算代码。唯一例外是 `web/src/locales/zh-CN.*` 语言包；Markdown 文档不算代码，继续用中文。

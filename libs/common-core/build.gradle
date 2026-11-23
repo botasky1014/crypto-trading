@@ -1,0 +1,7 @@
+// Plain-Java building blocks shared by every module: money / decimal helpers,
+// error codes and the business exception base class. No Spring dependency.
+plugins {
+    id 'java-library'
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+}

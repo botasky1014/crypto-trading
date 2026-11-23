@@ -7,6 +7,8 @@ plugins {
     id 'jvm-test-suite'
 }
 
+def ARCHITECTURE_RULES = ':libs:architecture-rules'
+
 testing {
     suites {
         configureEach {
@@ -14,10 +16,18 @@ testing {
             useJUnitJupiter()
             dependencies {
                 implementation platform(project(':platform'))
+                implementation 'org.assertj:assertj-core'
             }
         }
 
         test {
+            // Every module's unit tests can use the shared ArchUnit rules (design.md 11.2),
+            // e.g. `class ArchitectureTest extends AbstractArchitectureTest {}`.
+            if (project.path != ARCHITECTURE_RULES) {
+                dependencies {
+                    implementation project(ARCHITECTURE_RULES)
+                }
+            }
         }
 
         integrationTest(JvmTestSuite) {

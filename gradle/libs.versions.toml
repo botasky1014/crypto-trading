@@ -15,6 +15,9 @@ spring-cloud-alibaba = "2025.1.0.0"
 # Source: https://github.com/baomidou/mybatis-plus/releases/tag/v3.5.18.1
 # (also on Maven Central: com.baomidou:mybatis-plus-bom; 3.5.18.1 is a hotfix of 3.5.18 for Boot 4 starters)
 mybatis-plus = "3.5.18.1"
+# Source: https://repo1.maven.org/maven2/com/tngtech/archunit/archunit/ (latest 1.5.x, released 2026-09-25)
+# Not managed by any imported BOM, so platform/ adds it as a constraint.
+archunit = "1.5.1"
 
 [libraries]
 # BOMs imported by platform/
@@ -22,6 +25,9 @@ spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-depe
 spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 spring-cloud-alibaba-dependencies = { module = "com.alibaba.cloud:spring-cloud-alibaba-dependencies", version.ref = "spring-cloud-alibaba" }
 mybatis-plus-bom = { module = "com.baomidou:mybatis-plus-bom", version.ref = "mybatis-plus" }
+
+# Libraries without a BOM; versions are constrained in platform/
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 
 # Gradle plugins used as dependencies of build-logic
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }

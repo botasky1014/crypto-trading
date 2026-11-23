@@ -1,0 +1,19 @@
+// Servlet web conventions: RFC 9457 Problem Details, Jackson 3 settings, API versioning.
+// Activated through Spring Boot auto-configuration; a service only needs the dependency.
+plugins {
+    id 'java-library'
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+}
+
+dependencies {
+    api project(':libs:common-core')
+    api 'org.springframework.boot:spring-boot-starter-jackson'
+    // Spring MVC is provided by the service (spring-boot-starter-webmvc). Keeping it compileOnly
+    // lets a non-servlet module (e.g. the WebFlux gateway) use the Jackson part without pulling in MVC.
+    compileOnly 'org.springframework.boot:spring-boot-starter-webmvc'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-validation'
+}

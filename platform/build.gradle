@@ -19,4 +19,9 @@ dependencies {
     api platform(libs.spring.cloud.dependencies)
     api platform(libs.spring.cloud.alibaba.dependencies)
     api platform(libs.mybatis.plus.bom)
+
+    // Libraries that no imported BOM manages.
+    constraints {
+        api libs.archunit
+    }
 }

@@ -182,10 +182,35 @@ scripts/dev.sh stats
 预期：全部通过。`architecture-rules` 自带一组反例测试（故意违反规则的样例类），证明规则能拦住违规代码。
 
 **Checklist：**
-- [ ] 金额舍入测试覆盖 0、最小单位、超出精度、负数
-- [ ] Problem Details 格式有测试
-- [ ] `BigDecimal` JSON 序列化为字符串有测试
-- [ ] 每条 ArchUnit 规则都有一个反例测试
+- [x] 金额舍入测试覆盖 0、最小单位、超出精度、负数
+- [x] Problem Details 格式有测试
+- [x] `BigDecimal` JSON 序列化为字符串有测试
+- [x] 每条 ArchUnit 规则都有一个反例测试
+
+**说明（2026-11-23 完成时）：**
+- 版本：新增 ArchUnit 1.5.1（`libs.versions.toml`）。它不在任何导入的 BOM 里，所以在 `platform` 中用 `constraints` 管理版本。只用 `archunit` 核心库，不用 `archunit-junit5` 测试引擎：规则在普通 JUnit 测试中用 `rule.check(classes)` 执行，避开测试引擎与 JUnit 6 的兼容问题。
+- `common-core`（纯 Java，无 Spring 依赖）：
+  - `Decimals.roundDown(value, increment)`：舍入到最小单位的整数倍，**向零截断**（负数也是向零，绝对值不会变大），结果的小数位数与最小单位一致；支持非 10 的幂的最小单位（如 5、0.25）。另有 `requireNonNegative`、`requirePositive`、`isMultipleOf`，以及按数值比较、忽略小数位数的 `eq/gt/ge/lt/le`。
+  - `Money`（资产 + 金额）：按数值判等（`1.0 USD` 等于 `1.00 USD`），不同资产之间不能运算。
+  - 错误码：Java 枚举不能继承基类，所以"错误码枚举基类"实现为接口 `ErrorCode`。各服务用枚举实现它，枚举常量名就是错误码，`title` 默认由错误码生成（`INSUFFICIENT_PLATFORM_FUNDS` → `Insufficient platform funds`）。通用错误码在 `CommonErrorCode` 中。业务异常基类是 `BusinessException`，可以用 `withProperty` 附加机器可读字段，这些字段会出现在 Problem Details 中，供前端填充翻译文案。
+- `common-web`（Boot 自动配置，服务只需加依赖）：
+  - `ProblemDetailsExceptionHandler`：所有异常都返回 `application/problem+json`，带 `code`、`traceId`、`instance` 字段。`type` 省略，按 RFC 9457 等同于 `about:blank`。参数校验失败返回 `VALIDATION_FAILED`，并附 `errors: [{field, code}]`，其中 `code` 是约束名（如 `NotBlank`）。未知异常返回 `INTERNAL_ERROR` 和通用 detail，不泄露异常信息，堆栈只写日志。
+  - `traceId` 的来源依次是：MDC 的 `traceId`（P8 接入 Micrometer Tracing 后自动有值）、W3C `traceparent` 请求头、新生成的值。新生成的值会和错误日志一起记录。
+  - Jackson 3：`BigDecimal` 输出为字符串、不用科学计数法，输入时字符串和数字都接受；无类型目标（`Map`）里的小数读成 `BigDecimal`；时间输出 ISO-8601 UTC，`OffsetDateTime` 也会换算到 UTC。这个定制器排在 Boot 自身定制器之前，服务里的 `spring.jackson.*` 配置仍然优先。
+  - API 版本化：请求头 `API-Version`，不带时默认为 `1`；不带版本的接口对所有版本生效；未知版本返回 400 `UNSUPPORTED_API_VERSION`。
+  - Spring MVC 依赖是 `compileOnly`，由服务自己引入 `spring-boot-starter-webmvc`。这样非 Servlet 模块（例如 WebFlux 的 gateway）引入 common-web 时，只会用到 Jackson 部分。
+- `architecture-rules`：
+  - 规则共 8 条：
+    - 调用方向 3 条：controller 不依赖 mapper / client；service 不依赖 controller；mapper / client 不依赖 service / controller；
+    - `@Transactional` 2 条：类级别、方法级别各一条，Spring 和 Jakarta 两种注解都检查；
+    - `@Audited` 1 条：注解还不存在，暂时按简单类名匹配，P6 改为全限定名；
+    - model 纯净 1 条；
+    - 金额字段禁止 `double`/`float` 1 条：包括包装类和数组，字段名匹配不区分大小写。
+  - 每条规则都有反例样本（`samples.bad.*`）和一个全部合规的样本模块（`samples.good`）。
+  - design.md 11.2 的"服务隔离""模块隔离"与具体服务相关，到对应服务再加规则。
+  - 服务的用法：在根包放 `class ArchitectureTest extends AbstractArchitectureTest {}`。`common-core` 和 `common-web` 已经这样接入。
+- `test-conventions` 给除 `architecture-rules` 自身以外的所有模块的 `test` 套件加上 `architecture-rules` 依赖，同时给所有测试套件加上 AssertJ。
+- 测试时 JVM 会打印 `Sharing is only supported for boot loader classes...` 警告。这是 Mockito（随 `spring-boot-starter-test` 引入）动态加载 agent 导致的，不影响结果。
 
 ---
 
@@ -198,6 +223,7 @@ scripts/dev.sh stats
 - 接口：`GET /hello` 返回 Nacos 配置项 `hello.greeting` 的当前值。
 - 接入 Nacos Discovery 与 Nacos Config（`spring.config.import=nacos:hello.yaml`，命名空间 `dev`）。
 - 虚拟线程开启。
+- 测试根包放 `ArchitectureTest extends AbstractArchitectureTest`（P0-T05），检查 design.md 11.2 的规则。
 - IntelliJ 运行配置 `.run/hello.run.xml`。
 - `http/hello.http`。
 

@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 rootProject.name = 'crypto-trading'
 
 include 'platform'
+include 'libs:common-core', 'libs:common-web', 'libs:architecture-rules'

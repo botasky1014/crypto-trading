@@ -1065,8 +1065,9 @@ crypto-trading/
 │       └── crypto-trading.test-conventions.gradle
 ├── platform/                            # java-platform：Boot / Cloud / SCA / MyBatis-Plus BOM
 ├── libs/
-│   ├── common-core/                     # 通用异常、Problem Details、BigDecimal 工具
-│   ├── common-web/                      # 安全、Jackson、API 版本化配置
+│   ├── common-core/                     # 错误码、业务异常基类、BigDecimal / Money 工具（纯 Java）
+│   ├── common-web/                      # Problem Details 异常处理、Jackson、API 版本化、安全配置
+│   ├── architecture-rules/              # ArchUnit 规则（11.2），自动加入各模块的测试依赖
 │   ├── common-mybatis/                  # MyBatis-Plus 插件、自动填充、Outbox / 幂等表支持
 │   ├── common-kafka/                    # Avro Serde、消费幂等、DLT 配置
 │   ├── common-audit/                    # @Audited 注解、切面、audit_outbox 投递

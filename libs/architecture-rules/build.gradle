@@ -1,0 +1,17 @@
+// ArchUnit rules for design.md 11.2. Added automatically to every module's `test` suite
+// by the crypto-trading.test-conventions plugin.
+plugins {
+    id 'java-library'
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+}
+
+dependencies {
+    api 'com.tngtech.archunit:archunit'
+    // AbstractArchitectureTest is a JUnit test base class.
+    api 'org.junit.jupiter:junit-jupiter-api'
+
+    // Real annotations used by the counter-example classes.
+    testImplementation 'org.springframework:spring-tx'
+    testImplementation 'jakarta.transaction:jakarta.transaction-api'
+}
