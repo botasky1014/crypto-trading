@@ -28,10 +28,7 @@ class ProblemDetailsTest {
 
         assertThat(result).hasStatus(409).hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
         // "type" is omitted, which RFC 9457 defines as "about:blank".
-        assertThat(result)
-                .bodyJson()
-                .isStrictlyEqualTo(
-                        """
+        assertThat(result).bodyJson().isStrictlyEqualTo("""
                         {
                           "title": "Insufficient platform funds",
                           "status": 409,
@@ -41,8 +38,7 @@ class ProblemDetailsTest {
                           "asset": "USD",
                           "traceId": "%s"
                         }
-                        """
-                                .formatted(TRACE_ID));
+                        """.formatted(TRACE_ID));
     }
 
     @Test
@@ -99,10 +95,7 @@ class ProblemDetailsTest {
     void mvcResponsesUseTheJsonConventions() {
         MvcTestResult result = mvc.get().uri("/sample/quote").exchange();
 
-        assertThat(result)
-                .bodyJson()
-                .isStrictlyEqualTo(
-                        """
+        assertThat(result).bodyJson().isStrictlyEqualTo("""
                         {"symbol": "BTC-USD", "price": "97000.10", "qty": "0.00000001", "time": "2026-11-23T08:00:00Z"}
                         """);
     }

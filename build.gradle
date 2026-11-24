@@ -3,3 +3,16 @@
 plugins {
     id 'base'
 }
+
+// design.md 12.4: no Chinese in code (Markdown and the zh-CN language pack excepted).
+// Part of `check`, so `./gradlew build` (and CI) run it.
+def checkNoChinese = tasks.register('checkNoChinese', Exec) {
+    group = 'verification'
+    description = 'Fails if code contains Chinese characters (scripts/check-no-chinese.sh).'
+    commandLine layout.projectDirectory.file('scripts/check-no-chinese.sh').asFile.absolutePath
+    workingDir = layout.projectDirectory.asFile
+}
+
+tasks.named('check') {
+    dependsOn checkNoChinese
+}

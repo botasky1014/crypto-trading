@@ -49,7 +49,8 @@ public final class ArchitectureRules {
             .dependOnClassesThat()
             .resideInAnyPackage(MAPPER, CLIENT)
             .allowEmptyShould(true)
-            .because("design.md 11.2: controller -> service -> mapper / client; a controller must not skip the service");
+            .because(
+                    "design.md 11.2: controller -> service -> mapper / client; a controller must not skip the service");
 
     /** No reverse dependency: services do not know about controllers. */
     public static final ArchRule SERVICES_DO_NOT_DEPEND_ON_CONTROLLERS = noClasses()
@@ -158,6 +159,7 @@ public final class ArchitectureRules {
 
     private static DescribedPredicate<JavaAnnotation<?>> simpleName(String name) {
         return DescribedPredicate.describe(
-                "@" + name, annotation -> annotation.getRawType().getSimpleName().equals(name));
+                "@" + name,
+                annotation -> annotation.getRawType().getSimpleName().equals(name));
     }
 }

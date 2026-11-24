@@ -5,7 +5,10 @@
 plugins {
     id 'crypto-trading.java-conventions'
     id 'jvm-test-suite'
+    id 'jacoco'
 }
+
+def catalog = extensions.getByType(VersionCatalogsExtension).named('libs')
 
 def ARCHITECTURE_RULES = ':libs:architecture-rules'
 
@@ -17,6 +20,9 @@ testing {
             dependencies {
                 implementation platform(project(':platform'))
                 implementation 'org.assertj:assertj-core'
+                compileOnly 'org.projectlombok:lombok'
+                annotationProcessor platform(project(':platform'))
+                annotationProcessor 'org.projectlombok:lombok'
             }
         }
 
@@ -47,4 +53,20 @@ tasks.withType(Test).configureEach {
     // Memory-friendly defaults for a 16GB machine.
     maxHeapSize = '1g'
     maxParallelForks = 1
+}
+
+// Coverage: one report over all test suites that have run (test, integrationTest), so
+// `./gradlew test integrationTest jacocoTestReport` gives the combined picture.
+jacoco {
+    toolVersion = catalog.findVersion('jacoco').get().requiredVersion
+}
+
+tasks.named('jacocoTestReport', JacocoReport).configure {
+    dependsOn(tasks.named('test'))
+    mustRunAfter(tasks.named('integrationTest'))
+    executionData.setFrom(fileTree(layout.buildDirectory.dir('jacoco')).include('*.exec'))
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }

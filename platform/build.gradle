@@ -23,5 +23,10 @@ dependencies {
     // Libraries that no imported BOM manages.
     constraints {
         api libs.archunit
+        api libs.errorprone.core
+        api libs.nullaway
+        api libs.mapstruct
+        api libs.mapstruct.processor
+        api libs.lombok.mapstruct.binding
     }
 }

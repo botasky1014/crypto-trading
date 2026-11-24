@@ -43,8 +43,10 @@ class DecimalsTest {
 
         @Test
         void supportsIncrementsThatAreNotPowersOfTen() {
-            assertThat(Decimals.roundDown(new BigDecimal("17"), new BigDecimal("5"))).isEqualTo("15");
-            assertThat(Decimals.roundDown(new BigDecimal("0.37"), new BigDecimal("0.25"))).isEqualTo("0.25");
+            assertThat(Decimals.roundDown(new BigDecimal("17"), new BigDecimal("5")))
+                    .isEqualTo("15");
+            assertThat(Decimals.roundDown(new BigDecimal("0.37"), new BigDecimal("0.25")))
+                    .isEqualTo("0.25");
         }
 
         @Test
@@ -72,9 +74,11 @@ class DecimalsTest {
 
     @Test
     void isMultipleOf() {
-        assertThat(Decimals.isMultipleOf(new BigDecimal("0.0003"), BTC_QTY_INCREMENT)).isTrue();
+        assertThat(Decimals.isMultipleOf(new BigDecimal("0.0003"), BTC_QTY_INCREMENT))
+                .isTrue();
         assertThat(Decimals.isMultipleOf(BigDecimal.ZERO, BTC_QTY_INCREMENT)).isTrue();
-        assertThat(Decimals.isMultipleOf(new BigDecimal("0.00031"), BTC_QTY_INCREMENT)).isFalse();
+        assertThat(Decimals.isMultipleOf(new BigDecimal("0.00031"), BTC_QTY_INCREMENT))
+                .isFalse();
     }
 
     @Test
@@ -94,6 +98,7 @@ class DecimalsTest {
     }
 
     @Test
+    @SuppressWarnings("BigDecimalEquals") // shows on purpose the trap that Decimals.eq avoids
     void comparisonsIgnoreScale() {
         BigDecimal one = new BigDecimal("1.0");
         BigDecimal oneHundredths = new BigDecimal("1.00");

@@ -29,7 +29,10 @@ class JacksonConventionsTest {
             JsonMapper mapper = ctx.getBean(JsonMapper.class);
 
             String json = mapper.writeValueAsString(new Amounts(
-                    new BigDecimal("1E-8"), new BigDecimal("1.5E+12"), new BigDecimal("0.10"), new BigDecimal("-3.25")));
+                    new BigDecimal("1E-8"),
+                    new BigDecimal("1.5E+12"),
+                    new BigDecimal("0.10"),
+                    new BigDecimal("-3.25")));
 
             assertThat(json)
                     .isEqualTo(
@@ -42,7 +45,8 @@ class JacksonConventionsTest {
         runner.run(ctx -> {
             JsonMapper mapper = ctx.getBean(JsonMapper.class);
 
-            assertThat(mapper.readValue("{\"qty\":\"0.0001\"}", Order.class).qty()).isEqualTo("0.0001");
+            assertThat(mapper.readValue("{\"qty\":\"0.0001\"}", Order.class).qty())
+                    .isEqualTo("0.0001");
             assertThat(mapper.readValue("{\"qty\":0.0001}", Order.class).qty()).isEqualTo("0.0001");
         });
     }

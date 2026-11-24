@@ -34,12 +34,16 @@ class ApiVersioningTest {
 
     @Test
     void unversionedEndpointsServeEveryVersion() {
-        assertThat(mvc.get().uri("/sample/quote").header(ApiVersioning.HEADER, "2")).hasStatusOk();
+        assertThat(mvc.get().uri("/sample/quote").header(ApiVersioning.HEADER, "2"))
+                .hasStatusOk();
     }
 
     @Test
     void unknownVersionIsRejected() {
-        MvcTestResult result = mvc.get().uri("/sample/version").header(ApiVersioning.HEADER, "99").exchange();
+        MvcTestResult result = mvc.get()
+                .uri("/sample/version")
+                .header(ApiVersioning.HEADER, "99")
+                .exchange();
 
         assertThat(result).hasStatus(400);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("UNSUPPORTED_API_VERSION");

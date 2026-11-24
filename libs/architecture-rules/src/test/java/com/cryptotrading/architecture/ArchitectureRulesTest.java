@@ -22,16 +22,52 @@ class ArchitectureRulesTest {
 
     static Stream<Arguments> counterExamples() {
         return Stream.of(
-                Arguments.of("CONTROLLERS_ONLY_CALL_SERVICES / mapper", ArchitectureRules.CONTROLLERS_ONLY_CALL_SERVICES, "controllercallsmapper", "OrderMapper"),
-                Arguments.of("CONTROLLERS_ONLY_CALL_SERVICES / client", ArchitectureRules.CONTROLLERS_ONLY_CALL_SERVICES, "controllercallsclient", "LedgerClient"),
-                Arguments.of("SERVICES_DO_NOT_DEPEND_ON_CONTROLLERS", ArchitectureRules.SERVICES_DO_NOT_DEPEND_ON_CONTROLLERS, "serviceusescontroller", "OrderController"),
-                Arguments.of("MAPPERS_AND_CLIENTS_DO_NOT_DEPEND_ON_UPPER_LAYERS", ArchitectureRules.MAPPERS_AND_CLIENTS_DO_NOT_DEPEND_ON_UPPER_LAYERS, "mapperusesservice", "OrderService"),
-                Arguments.of("TRANSACTIONAL_TYPES_ONLY_IN_SERVICE_IMPL", ArchitectureRules.TRANSACTIONAL_TYPES_ONLY_IN_SERVICE_IMPL, "transactionalclass", "AccountService"),
-                Arguments.of("TRANSACTIONAL_METHODS_ONLY_IN_SERVICE_IMPL", ArchitectureRules.TRANSACTIONAL_METHODS_ONLY_IN_SERVICE_IMPL, "transactionalmethod", "AccountController.open"),
-                Arguments.of("AUDITED_ONLY_IN_SERVICE_IMPL", ArchitectureRules.AUDITED_ONLY_IN_SERVICE_IMPL, "auditedoutsideimpl", "ResetListener.onReset"),
+                Arguments.of(
+                        "CONTROLLERS_ONLY_CALL_SERVICES / mapper",
+                        ArchitectureRules.CONTROLLERS_ONLY_CALL_SERVICES,
+                        "controllercallsmapper",
+                        "OrderMapper"),
+                Arguments.of(
+                        "CONTROLLERS_ONLY_CALL_SERVICES / client",
+                        ArchitectureRules.CONTROLLERS_ONLY_CALL_SERVICES,
+                        "controllercallsclient",
+                        "LedgerClient"),
+                Arguments.of(
+                        "SERVICES_DO_NOT_DEPEND_ON_CONTROLLERS",
+                        ArchitectureRules.SERVICES_DO_NOT_DEPEND_ON_CONTROLLERS,
+                        "serviceusescontroller",
+                        "OrderController"),
+                Arguments.of(
+                        "MAPPERS_AND_CLIENTS_DO_NOT_DEPEND_ON_UPPER_LAYERS",
+                        ArchitectureRules.MAPPERS_AND_CLIENTS_DO_NOT_DEPEND_ON_UPPER_LAYERS,
+                        "mapperusesservice",
+                        "OrderService"),
+                Arguments.of(
+                        "TRANSACTIONAL_TYPES_ONLY_IN_SERVICE_IMPL",
+                        ArchitectureRules.TRANSACTIONAL_TYPES_ONLY_IN_SERVICE_IMPL,
+                        "transactionalclass",
+                        "AccountService"),
+                Arguments.of(
+                        "TRANSACTIONAL_METHODS_ONLY_IN_SERVICE_IMPL",
+                        ArchitectureRules.TRANSACTIONAL_METHODS_ONLY_IN_SERVICE_IMPL,
+                        "transactionalmethod",
+                        "AccountController.open"),
+                Arguments.of(
+                        "AUDITED_ONLY_IN_SERVICE_IMPL",
+                        ArchitectureRules.AUDITED_ONLY_IN_SERVICE_IMPL,
+                        "auditedoutsideimpl",
+                        "ResetListener.onReset"),
                 Arguments.of("MODEL_IS_PURE", ArchitectureRules.MODEL_IS_PURE, "modelusesservice", "OrderEntity"),
-                Arguments.of("NO_FLOATING_POINT_MONEY / double", ArchitectureRules.NO_FLOATING_POINT_MONEY, "floatingpointmoney", "PlaceOrderRequest.qty"),
-                Arguments.of("NO_FLOATING_POINT_MONEY / Float", ArchitectureRules.NO_FLOATING_POINT_MONEY, "floatingpointmoney", "PlaceOrderRequest.limitPrice"));
+                Arguments.of(
+                        "NO_FLOATING_POINT_MONEY / double",
+                        ArchitectureRules.NO_FLOATING_POINT_MONEY,
+                        "floatingpointmoney",
+                        "PlaceOrderRequest.qty"),
+                Arguments.of(
+                        "NO_FLOATING_POINT_MONEY / Float",
+                        ArchitectureRules.NO_FLOATING_POINT_MONEY,
+                        "floatingpointmoney",
+                        "PlaceOrderRequest.limitPrice"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -54,7 +90,9 @@ class ArchitectureRulesTest {
 
         for (ArchRule rule : ArchitectureRules.all()) {
             EvaluationResult result = rule.evaluate(good);
-            assertThat(result.hasViolation()).as(result.getFailureReport().toString()).isFalse();
+            assertThat(result.hasViolation())
+                    .as(result.getFailureReport().toString())
+                    .isFalse();
         }
     }
 
@@ -67,7 +105,8 @@ class ArchitectureRulesTest {
     void compositeRuleReportsEveryCounterExample() {
         EvaluationResult result = ArchitectureRules.allRules().evaluate(importSamples("bad"));
 
-        assertThat(result.getFailureReport().getDetails()).hasSizeGreaterThanOrEqualTo((int) counterExamples().count());
+        assertThat(result.getFailureReport().getDetails())
+                .hasSizeGreaterThanOrEqualTo((int) counterExamples().count());
     }
 
     private static JavaClasses importSamples(String subPackage) {

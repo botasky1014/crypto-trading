@@ -5,6 +5,7 @@ import java.util.HexFormat;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
 
 /**
@@ -24,7 +25,7 @@ final class TraceIds {
 
     private TraceIds() {}
 
-    static String resolve(HttpServletRequest request) {
+    static String resolve(@Nullable HttpServletRequest request) {
         String fromMdc = MDC.get(MDC_KEY);
         if (fromMdc != null && !fromMdc.isBlank()) {
             return fromMdc;

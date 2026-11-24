@@ -1,7 +1,12 @@
 // Base conventions for every Java module: JDK 25 (Temurin) toolchain, compiler flags,
-// and the shared version platform.
+// the shared version platform, and code quality tools (P0-T08):
+//   Spotless (Palantir Java Format), Error Prone + NullAway (JSpecify), Lombok / MapStruct processors.
+import net.ltgt.gradle.errorprone.CheckSeverity
+
 plugins {
     id 'java'
+    id 'com.diffplug.spotless'
+    id 'net.ltgt.errorprone'
 }
 
 def catalog = extensions.getByType(VersionCatalogsExtension).named('libs')
@@ -14,17 +19,59 @@ java {
 }
 
 dependencies {
-    // annotationProcessor does not extend implementation, so it gets the platform too.
+    // annotationProcessor and errorprone do not extend implementation, so they get the platform too.
     implementation platform(project(':platform'))
     annotationProcessor platform(project(':platform'))
+    errorprone platform(project(':platform'))
+
+    // Nullness annotations (@NullMarked, @Nullable) checked by NullAway.
+    implementation 'org.jspecify:jspecify'
+
+    errorprone 'com.google.errorprone:error_prone_core'
+    errorprone 'com.uber.nullaway:nullaway'
+
+    // Lombok and MapStruct (design.md 11.1: entities use Lombok, converters use MapStruct). Only the
+    // processors are configured here; a module that writes mappers adds `implementation 'org.mapstruct:mapstruct'`.
+    // lombok-mapstruct-binding lets MapStruct see the getters / setters that Lombok generates.
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding'
+    annotationProcessor 'org.mapstruct:mapstruct-processor'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     // Keep parameter names (Spring MVC / MyBatis binding without @Param on every argument).
     options.compilerArgs.add('-parameters')
+    // Lombok uses sun.misc.Unsafe inside javac; allow it explicitly so JDK 25 does not print
+    // deprecation warnings on every compile and real compiler warnings stay visible.
+    options.forkOptions.jvmArgs.add('--sun-misc-unsafe-memory-access=allow')
+
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        excludedPaths = '.*/build/generated/.*'
+        // NullAway: every type in com.cryptotrading is non-null unless annotated with JSpecify @Nullable.
+        check('NullAway', CheckSeverity.ERROR)
+        option('NullAway:AnnotatedPackages', 'com.cryptotrading')
+        option('NullAway:JSpecifyMode', 'true')
+    }
+}
+
+// Tests: Error Prone still runs, NullAway does not (mocks, @Autowired fields and assertions on
+// nullable values would need annotations everywhere without making production code safer).
+tasks.matching { it instanceof JavaCompile && it.name != 'compileJava' }.configureEach {
+    options.errorprone.check('NullAway', CheckSeverity.OFF)
 }
 
 tasks.withType(Javadoc).configureEach {
     options.encoding = 'UTF-8'
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        palantirJavaFormat(catalog.findVersion('palantir-java-format').get().requiredVersion)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }

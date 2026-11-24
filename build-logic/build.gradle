@@ -6,4 +6,7 @@ plugins {
 dependencies {
     // Makes `id 'org.springframework.boot'` resolvable inside the convention plugins.
     implementation libs.spring.boot.gradle.plugin
+    // Code quality plugins applied by crypto-trading.java-conventions (P0-T08).
+    implementation libs.spotless.gradle.plugin
+    implementation libs.errorprone.gradle.plugin
 }

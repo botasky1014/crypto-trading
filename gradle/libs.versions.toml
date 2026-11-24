@@ -19,6 +19,25 @@ mybatis-plus = "3.5.18.1"
 # Not managed by any imported BOM, so platform/ adds it as a constraint.
 archunit = "1.5.1"
 
+# ---- Code quality (P0-T08); checked 2026-11-24 ----
+# Source: https://plugins.gradle.org/plugin/com.diffplug.spotless
+spotless = "8.12.0"
+# Source: https://repo1.maven.org/maven2/com/palantir/javaformat/palantir-java-format/
+palantir-java-format = "2.103.0"
+# Source: https://plugins.gradle.org/plugin/net.ltgt.errorprone
+errorprone-plugin = "5.2.0"
+# Source: https://repo1.maven.org/maven2/com/google/errorprone/error_prone_core/
+errorprone = "2.53.0"
+# Source: https://repo1.maven.org/maven2/com/uber/nullaway/nullaway/
+nullaway = "0.14.4"
+# Source: https://repo1.maven.org/maven2/org/jacoco/org.jacoco.core/ (Java 25 class files need >= 0.8.14)
+jacoco = "0.8.16"
+# Source: https://repo1.maven.org/maven2/org/mapstruct/mapstruct/ (latest final release; 1.7 is still Beta)
+mapstruct = "1.6.3"
+# Source: https://repo1.maven.org/maven2/org/projectlombok/lombok-mapstruct-binding/
+lombok-mapstruct-binding = "0.2.0"
+# Lombok (1.18.48) and JSpecify (1.0.1) are managed by the Spring Boot BOM.
+
 [libraries]
 # BOMs imported by platform/
 spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -28,9 +47,16 @@ mybatis-plus-bom = { module = "com.baomidou:mybatis-plus-bom", version.ref = "my
 
 # Libraries without a BOM; versions are constrained in platform/
 archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+lombok-mapstruct-binding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombok-mapstruct-binding" }
 
 # Gradle plugins used as dependencies of build-logic
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+spotless-gradle-plugin = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+errorprone-gradle-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

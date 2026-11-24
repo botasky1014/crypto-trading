@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Base class for expected business failures. The web layer turns it into a Problem Details
@@ -26,7 +27,7 @@ public class BusinessException extends RuntimeException {
         this(errorCode, detail, null);
     }
 
-    public BusinessException(ErrorCode errorCode, String detail, Throwable cause) {
+    public BusinessException(ErrorCode errorCode, String detail, @Nullable Throwable cause) {
         super(detail, cause);
         this.errorCode = Objects.requireNonNull(errorCode, "errorCode");
         if (!ErrorCode.isValidCode(errorCode.code())) {

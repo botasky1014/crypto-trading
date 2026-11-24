@@ -44,7 +44,8 @@ class ActuatorEndpointsTest {
     void prometheusMetricsCarryTheCommonTagsAndHttpHistogram() throws Exception {
         assertThat(mvc.get().uri("/sample/ping")).hasStatusOk();
 
-        String body = mvc.get().uri("/actuator/prometheus").exchange().getResponse().getContentAsString();
+        String body =
+                mvc.get().uri("/actuator/prometheus").exchange().getResponse().getContentAsString();
         assertThat(body)
                 .contains("jvm_memory_used_bytes{")
                 .contains("application=\"sample\"")

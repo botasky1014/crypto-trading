@@ -101,6 +101,8 @@ Prometheus 的抓取目标写在 `deploy/compose/prometheus/targets/*.json`（`f
 | 查看容器内存 | `scripts/dev.sh stats` |
 | 环境自检 | `scripts/doctor.sh` |
 | 构建与全部检查 | `./gradlew build` |
+| 自动格式化 | `./gradlew spotlessApply` |
+| 覆盖率报告 | `./gradlew test integrationTest jacocoTestReport`（`build/reports/jacoco/`） |
 | 只跑集成测试 | `./gradlew integrationTest` |
 | 启动某个服务 | `./gradlew :services:<name>:bootRun`，或 IntelliJ 中对应的运行配置（`.run/*.run.xml`，随代码提交） |
 | 前端开发 | `pnpm -C web dev` |

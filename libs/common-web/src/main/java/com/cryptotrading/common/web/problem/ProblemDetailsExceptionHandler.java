@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -59,7 +60,7 @@ public class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandl
     private static final Logger log = LoggerFactory.getLogger(ProblemDetailsExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Object> handleBusinessException(BusinessException ex, WebRequest request) {
+    public @Nullable ResponseEntity<Object> handleBusinessException(BusinessException ex, WebRequest request) {
         ErrorCode errorCode = ex.getErrorCode();
         HttpStatusCode status = HttpStatusCode.valueOf(errorCode.httpStatus());
         ProblemDetail body = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
@@ -75,10 +76,10 @@ public class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandl
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
+    public @Nullable ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
         CommonErrorCode errorCode = CommonErrorCode.INTERNAL_ERROR;
-        ProblemDetail body = ProblemDetail.forStatusAndDetail(
-                HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        ProblemDetail body =
+                ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         body.setTitle(errorCode.title());
         body.setProperty(CODE, errorCode.code());
         String traceId = traceId(request);
@@ -88,14 +89,16 @@ public class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandl
     }
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail body = ex.getBody();
         body.setDetail("Request validation failed");
         List<Map<String, String>> errors = ex.getBindingResult().getAllErrors().stream()
                 .map(error -> Map.of(
-                        "field", error instanceof FieldError fe ? fe.getField() : error.getObjectName(),
-                        "code", String.valueOf(error.getCode())))
+                        "field",
+                        error instanceof FieldError fe ? fe.getField() : error.getObjectName(),
+                        "code",
+                        String.valueOf(error.getCode())))
                 .toList();
         body.setProperty(ERRORS, errors);
         return handleExceptionInternal(ex, body, headers, status, request);
@@ -106,8 +109,8 @@ public class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandl
      * above, pass through here. Adds {@code code}, {@code traceId} and {@code instance}.
      */
     @Override
-    protected ResponseEntity<Object> handleExceptionInternal(
-            Exception ex, Object body, HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
+    protected @Nullable ResponseEntity<Object> handleExceptionInternal(
+            Exception ex, @Nullable Object body, HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
         if (body == null) {
             body = ProblemDetail.forStatus(statusCode);
         }
@@ -141,7 +144,7 @@ public class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandl
         return TraceIds.resolve(servletRequest(request));
     }
 
-    private static HttpServletRequest servletRequest(WebRequest request) {
+    private static @Nullable HttpServletRequest servletRequest(WebRequest request) {
         return request instanceof NativeWebRequest nwr ? nwr.getNativeRequest(HttpServletRequest.class) : null;
     }
 }

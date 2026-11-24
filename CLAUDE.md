@@ -27,7 +27,7 @@
 ## 环境限制
 
 - 本机是 Apple 芯片 Mac，16GB 内存。只启动当前任务需要的 Compose profile，所有镜像都要支持 `linux/arm64`。
-- JDK 25（Temurin，由 Gradle Toolchain 管理）；Gradle 9.x，Groovy DSL；Node LTS + pnpm。
+- JDK 25（Temurin，由 Gradle Toolchain 管理；Gradle Daemon 也固定为 Temurin 25，见 `gradle/gradle-daemon-jvm.properties`）；Gradle 9.x，Groovy DSL；Node LTS + pnpm。
 - 版本只在 `gradle/libs.versions.toml` 里定义，每个版本都要注明来源；子项目依赖不写版本，统一由 `platform` 管理。模块通过 `build-logic` 的约定插件构建：服务用 `crypto-trading.spring-service`，库用 `crypto-trading.java-conventions`（需要测试时再加 `crypto-trading.test-conventions`）。
 
 ## 常用命令
@@ -38,6 +38,8 @@
 | 查看容器状态 / 内存 | `scripts/dev.sh ps` / `scripts/dev.sh stats` |
 | 环境自检 | `scripts/doctor.sh` |
 | 构建与全部检查 | `./gradlew build` |
+| 自动格式化 | `./gradlew spotlessApply` |
+| 覆盖率报告 | `./gradlew test integrationTest jacocoTestReport`（`build/reports/jacoco/`） |
 | 集成测试 | `./gradlew integrationTest` |
 | 启动服务 | `./gradlew :services:<name>:bootRun` |
 | 前端开发 | `pnpm -C web dev` |
@@ -60,6 +62,8 @@
   - 金额、数量、价格**禁止用 `double`/`float`**，全程用 `BigDecimal`；
   - 服务之间不共享 entity，只通过 `libs` 里的契约（Avro、Protobuf、DTO）交互。
   - 规则在 `libs/architecture-rules`。每个服务都要在测试根包放一个 `class ArchitectureTest extends AbstractArchitectureTest {}`。
+- 空值：NullAway 检查 `com.cryptotrading` 的生产代码，没标注的类型都是非空；可能为空的参数、返回值、字段用 `org.jspecify.annotations.Nullable` 标注。改完代码先 `./gradlew spotlessApply` 再 `build`。不要靠 `@SuppressWarnings` 绕过 NullAway 或 Error Prone，确有必要时注明原因。
+- 用到 MapStruct 的模块自己加 `implementation 'org.mapstruct:mapstruct'`，并在该模块加 `-Amapstruct.unmappedTargetPolicy=ERROR`（注解处理器已由约定插件配置）。
 - 金额舍入用 `common-core` 的 `Decimals.roundDown`（按最小单位向零截断），比较用 `Decimals.eq/gt/...`，不要用 `BigDecimal.equals`。
 - 业务错误：各服务定义 `enum XxxErrorCode implements ErrorCode`，抛出 `BusinessException`，由 `common-web` 统一转成 Problem Details。
 - **多语言与代码语言**（design.md 12.4）：

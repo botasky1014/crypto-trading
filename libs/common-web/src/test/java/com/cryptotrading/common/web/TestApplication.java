@@ -42,7 +42,10 @@ public class TestApplication {
         @GetMapping("/sample/quote")
         Quote quote() {
             return new Quote(
-                    "BTC-USD", new BigDecimal("97000.10"), new BigDecimal("1E-8"), Instant.parse("2026-11-23T08:00:00Z"));
+                    "BTC-USD",
+                    new BigDecimal("97000.10"),
+                    new BigDecimal("1E-8"),
+                    Instant.parse("2026-11-23T08:00:00Z"));
         }
 
         @PostMapping("/sample/orders")
@@ -52,7 +55,8 @@ public class TestApplication {
 
         @GetMapping("/sample/business-error")
         void businessError() {
-            throw new BusinessException(SampleErrorCode.INSUFFICIENT_PLATFORM_FUNDS, "Platform pool cannot fund 10000 USD")
+            throw new BusinessException(
+                            SampleErrorCode.INSUFFICIENT_PLATFORM_FUNDS, "Platform pool cannot fund 10000 USD")
                     .withProperty("asset", "USD");
         }
 

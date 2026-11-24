@@ -53,7 +53,8 @@ class ErrorCodeTest {
 
     @Test
     void businessExceptionCarriesCodeDetailAndProperties() {
-        BusinessException e = new BusinessException(SampleErrorCode.INSUFFICIENT_PLATFORM_FUNDS, "Platform pool is short")
+        BusinessException e = new BusinessException(
+                        SampleErrorCode.INSUFFICIENT_PLATFORM_FUNDS, "Platform pool is short")
                 .withProperty("asset", "USD");
 
         assertThat(e.getErrorCode()).isEqualTo(SampleErrorCode.INSUFFICIENT_PLATFORM_FUNDS);
@@ -63,7 +64,8 @@ class ErrorCodeTest {
 
     @Test
     void businessExceptionDefaultsDetailToTitle() {
-        assertThat(new BusinessException(CommonErrorCode.NOT_FOUND).getMessage()).isEqualTo("Not found");
+        assertThat(new BusinessException(CommonErrorCode.NOT_FOUND).getMessage())
+                .isEqualTo("Not found");
     }
 
     @Test

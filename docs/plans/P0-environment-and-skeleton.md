@@ -337,11 +337,30 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 4. 故意在 hello 的注释里写一个中文字符，`./gradlew build` 失败并指出文件和行号；删除后通过。
 
 **Checklist：**
-- [ ] 格式错误会导致构建失败
-- [ ] NullAway 生效
-- [ ] 覆盖率报告可生成
-- [ ] 中文检查生效（`zh-CN` 语言包和 Markdown 除外）
-- [ ] 验证用的错误代码已删除
+- [x] 格式错误会导致构建失败
+- [x] NullAway 生效
+- [x] 覆盖率报告可生成
+- [x] 中文检查生效（`zh-CN` 语言包和 Markdown 除外）
+- [x] 验证用的错误代码已删除
+
+**说明（2026-11-24 完成时）：**
+- 版本（`libs.versions.toml`，均注明来源）：Spotless Gradle 插件 8.12.0、Palantir Java Format 2.103.0、Error Prone 2.53.0（Gradle 插件 `net.ltgt.errorprone` 5.2.0）、NullAway 0.14.4、JaCoCo 0.8.16、MapStruct 1.6.3（1.7 仍是 Beta）、lombok-mapstruct-binding 0.2.0。Lombok 1.18.48 和 JSpecify 1.0.1 由 Boot BOM 管理；其余库版本在 `platform` 中用 `constraints` 管理。
+- **Gradle Daemon 改为 Temurin 25。** Spotless 在 Daemon 进程里运行 Palantir Java Format，而它依赖 javac 内部 API：在本机 JDK 27 上报 `NoSuchFieldError: JCCompilationUnit ... endPositions`，2.103.0 已是最新版。所以用 `./gradlew updateDaemonJvm --jvm-version=25 --jvm-vendor=adoptium` 生成 `gradle/gradle-daemon-jvm.properties`，让 Daemon 也用 Temurin 25（缺少时由 Gradle 自动下载）。这改变了 P0-T03 说明中"Daemon 用本机默认 JDK"的做法；编译、测试仍走 Toolchain，和以前一样。
+- `crypto-trading.java-conventions`：
+  - Spotless：只格式化 `src/*/java/**/*.java`，Palantir 格式 + 删除行尾空格 + 文件末尾换行。格式不对时 `spotlessCheck` 失败并提示 `Run './gradlew spotlessApply'`。接入时对已有代码执行了一次 `spotlessApply`，只有换行调整。
+  - Error Prone：默认规则，ERROR 级问题使构建失败，WARNING 只提示；生成代码不检查。
+  - NullAway：ERROR 级；`AnnotatedPackages=com.cryptotrading`（只检查本项目的包），`JSpecifyMode=true`，可空用 `org.jspecify.annotations.Nullable` 标注，没标注的就是非空。**只检查生产代码**，测试代码不跑 NullAway（Mockito、`@Autowired` 字段等会产生大量误报），Error Prone 的其他规则在测试代码中照常执行。
+  - 接入时修复了已有代码中的问题：`BusinessException` 的 `cause` 参数、`TraceIds.resolve` 的参数、`ProblemDetailsExceptionHandler` 的几个方法（返回值与 Spring 基类一致，标为 `@Nullable`）。`DecimalsTest` 里故意演示 `BigDecimal.equals` 陷阱的测试加了 `@SuppressWarnings("BigDecimalEquals")`。
+  - Lombok：`compileOnly` + 注解处理器；MapStruct：只配置注解处理器和 `lombok-mapstruct-binding`，用到 MapStruct 的模块自己加 `implementation 'org.mapstruct:mapstruct'`。原本想全局加 `-Amapstruct.unmappedTargetPolicy=ERROR`，但没有 `@Mapper` 的模块里 javac 会警告"没有处理器识别该选项"，所以放到第一个使用 MapStruct 的模块再加。根目录 `lombok.config`：`lombok.addLombokGeneratedAnnotation = true`，让 JaCoCo 忽略 Lombok 生成的代码。
+  - Lombok 在 javac 中使用 `sun.misc.Unsafe`，JDK 25 每次编译都会打印弃用提示，所以给编译进程加了 `--sun-misc-unsafe-memory-access=allow`，避免真正的编译警告被淹没。
+- `crypto-trading.test-conventions`：应用 `jacoco`；`jacocoTestReport` 汇总 `build/jacoco/` 下所有已运行套件的数据（`test`、`integrationTest`），输出 HTML 和 XML。要看合并结果，执行 `./gradlew test integrationTest jacocoTestReport`。各测试套件也可以用 Lombok。
+- 中文检查：`scripts/check-no-chinese.sh` 用 perl 实现（macOS 和 CI 的 Linux 都有，不依赖 GNU grep）。扫描范围是 `git ls-files --cached --others --exclude-standard`：除了已跟踪的文件，还包括**新建但还没 `git add` 的文件**，这样提交前就能发现问题。跳过二进制文件和已删除的文件。根项目的 `checkNoChinese`（`Exec`）挂在 `check` 上。
+- 验证：
+  1. 把 `GreetingServiceImpl` 中的 `currentGreeting()` 写成 `currentGreeting(  )   {`：`spotlessJavaCheck` 失败，显示差异并提示 `Run './gradlew spotlessApply'`；执行后文件恢复原样，构建通过。
+  2. 新增一个可能返回 `null` 但未标注的方法：`[NullAway] returning @Nullable expression from method with @NonNull return type`，构建失败；加上 `@Nullable` 后通过。
+  3. `./gradlew jacocoTestReport` 为 5 个模块生成 `build/reports/jacoco/test/html/index.html`；行覆盖率：architecture-rules 97%、common-core 88%、common-observability 100%、common-web 96%、hello 88%。
+  4. 在注释里写入中文：`checkNoChinese` 失败，输出 `services/hello/.../GreetingServiceImpl.java:19: ...`；删除后通过。另外验证了例外：`web/src/locales/zh-CN.json` 含中文时通过，`en-US.json` 含中文时失败；docs 下的 Markdown 本来就含中文，检查通过。
+  - 验证用的代码已全部恢复，`git status` 中 hello 没有改动。
 
 ---
 

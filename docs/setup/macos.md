@@ -61,7 +61,7 @@ pnpm -v
 | 位置 | 设置 |
 | --- | --- |
 | File → Project Structure → Project → SDK | **Temurin 25**。没有的话点 Add SDK → Download JDK，选 Eclipse Temurin 25 |
-| Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JVM | **Temurin 25**（或选 Project SDK） |
+| Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JVM | **Temurin 25**（或选 Project SDK）。仓库的 `gradle/gradle-daemon-jvm.properties` 也把 Gradle Daemon 固定为 Temurin 25：Spotless 使用的 Palantir Java Format 在更新的 JDK 上无法运行 |
 | Settings → Build, Execution, Deployment → Compiler → Annotation Processors | 勾选 **Enable annotation processing**（Lombok、MapStruct 需要） |
 
 运行配置放在仓库的 `.run/` 目录，随代码提交，IntelliJ 会自动识别。手工调接口用 IntelliJ HTTP Client，请求文件放在 `http/*.http`。
