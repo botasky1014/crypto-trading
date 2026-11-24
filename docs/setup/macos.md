@@ -6,6 +6,7 @@
 
 ```bash
 brew install git jq        # curl 是 macOS 自带的
+brew install actionlint    # 检查 GitHub Actions 工作流（P0-T09），会顺带用到 shellcheck
 ```
 
 不需要手动安装 JDK。Gradle Toolchain 会自动下载 Temurin 25。

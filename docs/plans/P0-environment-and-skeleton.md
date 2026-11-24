@@ -380,8 +380,18 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 2. 告诉用户：推送到 `<github-owner>/crypto-trading` 后，在 GitHub Actions 页面确认工作流通过。
 
 **Checklist：**
-- [ ] `actionlint` 无错误
+- [x] `actionlint` 无错误
 - [ ] 用户推送后工作流通过（由用户确认）
+
+**说明（2026-11-24 完成时）：**
+- 运行器 `ubuntu-24.04`，超时 30 分钟，`permissions: contents: read`；同一分支或 PR 有新的运行时取消旧的。
+- Action 全部固定到 commit SHA，注释里写明对应的版本（2026-11-24 查到的最新版）：`actions/checkout` v7.0.1、`actions/setup-java` v6.3.0（Temurin 25）、`gradle/actions/setup-gradle` v6.4.1、`actions/upload-artifact` v7.0.2。固定 SHA 是为了防止标签被改指向别的代码；升级时同时改 SHA 和注释。
+- `setup-gradle` 设置了 `cache-provider: basic`：它的默认值 `enhanced` 是 Gradle 公司的商业缓存服务，有单独的使用条款，这里改用基于 GitHub Actions 缓存的开源实现。只有 `main` 写缓存，其他分支和 PR 只读。`setup-gradle` 默认还会校验 Gradle Wrapper jar 的校验和。
+- 执行 `./gradlew build integrationTest jacocoTestReport --continue`：`build` 已包含单元测试、ArchUnit、Spotless、Error Prone / NullAway 和中文检查；加 `jacocoTestReport` 才会生成覆盖率报告；`--continue` 让所有失败的模块都显示出来。CI 上没有 `.env.local`，构建和测试不需要它。
+- 测试报告（`build/reports/tests/`、`build/test-results/`）和覆盖率报告（`build/reports/jacoco/`）分成两个 artifact 上传，保留 14 天；构建失败时也上传（`!cancelled()`）。
+- Gradle Daemon（`gradle/gradle-daemon-jvm.properties`）和 Toolchain 都能直接用 `setup-java` 装好的 Temurin 25，不需要额外下载。
+- 验证：本机用 Homebrew 安装 actionlint 1.7.12，`actionlint` 对 `ci.yml` 报 0 个错误（同时用 shellcheck 检查了 `run` 脚本）；故意把运行器写成不存在的 `ubuntu-2404`，actionlint 能报出来。本机执行与 CI 相同的命令（加 `--rerun-tasks`）构建成功，5 个模块都生成了测试和覆盖率报告；目前还没有集成测试，`integrationTest` 均为 `NO-SOURCE`。`gradlew` 和 `scripts/*.sh` 在 git 中都是可执行权限（`100755`），Linux 运行器上能直接执行。
+- 工作流在 GitHub 上是否通过，需要用户推送后确认。
 
 ---
 

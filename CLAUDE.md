@@ -71,4 +71,5 @@
   - 代码里只能用英文，不能出现任何中文：注释、日志、异常信息、配置、脚本、SQL、测试名和测试数据都算代码。唯一例外是 `web/src/locales/zh-CN.*` 语言包；Markdown 文档不算代码，继续用中文。
   - 后端不做国际化，只返回英文错误码（Problem Details 的 `code`、风控 `rule` 等），由前端翻译。
   - P0-T08 起 `./gradlew build` 会用 `scripts/check-no-chinese.sh` 检查。
+- CI：`.github/workflows/ci.yml`，执行 `./gradlew build integrationTest jacocoTestReport`。Action 固定到 commit SHA 并在注释写版本；改工作流后本地跑 `actionlint`。
 - 服务间通信：order 调 risk 用 gRPC；同步调用用 REST（HTTP Interface + LoadBalancer）；事件走 Kafka（Avro）。内部接口的路径前缀是 `/internal`，gateway 不路由这些接口。

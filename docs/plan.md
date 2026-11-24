@@ -55,7 +55,7 @@
 | IDE | IntelliJ IDEA；手工验证使用 IntelliJ HTTP Client（`http/*.http` 文件） |
 | JDK | 由 Gradle Toolchain 自动下载 Temurin 25；IDE 中也配置 Temurin 25 |
 | Node.js | 当前 LTS（≥ 22.12），pnpm（通过 corepack 启用） |
-| 其他 CLI | git、jq、httpie 或 curl、k3d / kubectl / helm（P9 才需要） |
+| 其他 CLI | git、jq、httpie 或 curl、actionlint（检查 CI 工作流）、k3d / kubectl / helm（P9 才需要） |
 
 ---
 
