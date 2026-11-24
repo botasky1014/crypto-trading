@@ -649,6 +649,7 @@ sequenceDiagram
 | `strategy.yaml` | 每用户最多运行中策略实例数（5）、定投可选间隔 | 是 |
 
 - **修改入口：** 业务配置只能通过管理接口 `PUT /api/admin/configs/{dataId}` 修改（必须填写原因），由 account 调用 Nacos OpenAPI 写入并记审计 `CONFIG_UPDATE`。Nacos 控制台写权限只保留给运维账号作应急；Nacos 自带配置历史作为第二份记录。
+- **Nacos 账号（最小权限）：** 管理员 `nacos` 只给人在控制台应急时使用；所有服务共用一个账号（Compose 环境为 `svc-dev`），只能读配置、注册和发现服务；`config-admin` 只给 account 的配置管理接口使用，可以写配置。账号密码在 `.env.local` / Vault。
 - 敏感信息（数据库密码、平台 Alpaca Key、Keycloak client secret）不放 Nacos，由 Vault 提供。
 
 ---
@@ -1310,7 +1311,7 @@ web/src/
 
 | 编号 | 事项 | 影响 | 处理方式 |
 | --- | --- | --- | --- |
-| Q1 | SCA 2025.1.0.0 与 Boot 4.1 的兼容性未验证（A4） | 高 | P0 第一件事验证；不兼容则退回 Boot 4.0.x 并尽快跟进 SCA 新版（届时另行决策） |
+| Q1 | SCA 2025.1.0.0 与 Boot 4.1 的兼容性未验证（A4） | 高 | P0 第一件事验证；不兼容则退回 Boot 4.0.x 并尽快跟进 SCA 新版（届时另行决策）。**已验证（P0-T06）：兼容**，见 `docs/verification/compatibility.md` |
 | Q2 | 行情 / 成交回报 WebSocket 的连接数限制（A1、A2） | 中 | P2 实测；若允许多连接，Leader 机制仍保留 |
 | Q3 | REST 限流的准确数值（A3）；所有用户共享后实际可支撑的下单频率 | 中 | P2 实测，参数放 Nacos |
 | Q4 | 模拟账户初始权益和能否调整（A5），决定可开户人数 | 中 | P2 确认；资金池余额在 Grafana 可见并有告警 |

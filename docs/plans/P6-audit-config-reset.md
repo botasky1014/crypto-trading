@@ -108,6 +108,7 @@
 **实现要点：**
 - account：`GET /api/admin/configs`（可管理的 Data ID 白名单：`risk.yaml`、`order.yaml`、`ledger.yaml`、`account.yaml`、`strategy.yaml`、`market-data.yaml`）、`GET /api/admin/configs/{dataId}`、`PUT /api/admin/configs/{dataId}`（`content`、`reason` 必填；先做 YAML 语法校验；通过 Nacos OpenAPI 写入；审计 `CONFIG_UPDATE`，`before` / `after` 为修改前后内容）。
 - Nacos 鉴权：创建 `config-admin` 账号（仅 account 使用，可写上述 Data ID）、`ops` 账号（运维应急）；各服务使用只读账号。账号密码在 `.env.local` / Vault。
+  - P0-T06 已由 `scripts/dev.sh` 建好 `svc-dev`（所有服务：配置只读、注册读写）和 `config-admin`（暂时可写 `dev` 中全部配置）。本任务把 `config-admin` 的权限收窄到上述白名单 Data ID（资源写成 `dev:DEFAULT_GROUP:config/risk.yaml` 这样的形式），并新增 `ops` 账号。Nacos 3 没有 v1 / v2 OpenAPI，写配置用 `POST /nacos/v3/admin/cs/config`。详见 P0-T06 的说明。
 - risk 收到配置刷新事件后，以系统身份记录 `RISK_RULE_APPLIED`（含新旧阈值）。
 
 **验证：** 管理员通过接口把 R05 改为每分钟 5 次 → 立即生效（第 6 次下单被拒）→ 审计中有 `CONFIG_UPDATE` 和 `RISK_RULE_APPLIED`；用服务的只读账号写 Nacos 被拒绝。

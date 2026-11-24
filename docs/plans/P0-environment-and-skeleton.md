@@ -244,10 +244,30 @@ curl -s localhost:8090/hello
 - 配置无法动态刷新。
 
 **Checklist：**
-- [ ] 目录结构符合 design.md 11.1
-- [ ] 注册成功
-- [ ] 配置动态刷新成功
-- [ ] 在 `docs/verification/compatibility.md` 记录实际版本组合与结论（对应 design.md Q1）
+- [x] 目录结构符合 design.md 11.1
+- [x] 注册成功
+- [x] 配置动态刷新成功
+- [x] 在 `docs/verification/compatibility.md` 记录实际版本组合与结论（对应 design.md Q1）
+
+**说明（2026-11-23 完成时）：**
+- **结论：兼容，没有触发停止条件。** Boot 4.1.3 + Spring Cloud 2025.1.5 + SCA 2025.1.0.0（Nacos 客户端 3.1.1）连 Nacos 服务端 3.3.0，启动、注册、动态刷新都正常，启动日志里没有 Spring 或 Nacos 的 WARN / ERROR（只有 nacos-client 内部用到 `sun.misc.Unsafe` 时 JDK 打印的提示，见 compatibility.md）。另外用错误的版本范围启动了一次，确认 Spring Cloud 兼容性校验确实在运行。版本组合和验证过程见 `docs/verification/compatibility.md`。
+- 目录：`controller/`、`service/` + `service/impl/`、`model/dto/`、`config/`。`GET /hello` 返回 `{"greeting": "..."}`（`GreetingResponse`）。配置项绑定在 `config/HelloProperties`，它是普通的可变类而不是 record：Spring Cloud 刷新配置时靠 setter 重新绑定，record 不会更新。
+- **Nacos 初始配置。** 设计里规定的 `deploy/nacos/`（design.md 11）在本任务建立，按 `deploy/nacos/<命名空间>/<Data ID>` 存放。`scripts/dev.sh up core` 在 Nacos 就绪后创建缺少的命名空间（`dev`），并发布 Nacos 中**还不存在**的配置，已存在的不覆盖（之后的修改都在 Nacos 里做）。重复执行不会有副作用。
+- **本地密钥传给服务。** `crypto-trading.spring-service` 插件让 `bootRun` 读取根目录 `.env.local`，作为进程环境变量（已在环境中的变量优先）；同时给 `bootRun` 加上 `-Xmx256m -XX:+UseSerialGC`（design.md 10.1）。环境变量在**执行时**才解析：如果在配置阶段解析，环境会被存进配置缓存，之后命令行里设置的变量（例如 `NACOS_USERNAME=... ./gradlew ...bootRun`）和 `.env.local` 的修改都会被忽略。这个问题已实测：复用配置缓存时，命令行覆盖仍然生效。`.run/hello.run.xml` 是 Gradle 类型的运行配置，执行的就是 `bootRun`，所以 IntelliJ 里启动也能拿到密钥。
+- **Nacos 账号（已与用户确认）。** 按最小权限分开账号，`scripts/dev.sh up core` 会幂等地创建用户、同名角色和权限，每次执行都把密码同步为 `.env.local` 中的值：
+  | 账号 | 使用者 | 权限 | 密码键 |
+  | --- | --- | --- | --- |
+  | `nacos` | 人，控制台应急 | 管理员 | `NACOS_ADMIN_PASSWORD` |
+  | `svc-dev` | 所有服务 | `dev:*:config/*` 只读，`dev:*:naming/*` 读写 | `NACOS_SERVICE_PASSWORD` |
+  | `config-admin` | 只给 account 的配置管理接口（P6-T05） | `dev:*:config/*` 读写 | `NACOS_CONFIG_ADMIN_PASSWORD` |
+
+  hello 默认用 `svc-dev`，可以用 `NACOS_USERNAME` / `NACOS_PASSWORD` 覆盖。用 nacos-client 3.1.1 实测：`svc-dev` 在 `dev` 中能读配置、能注册，但写配置被拒绝（`publishConfig` 返回 `false`；临时加上写权限后返回 `true`，证明是权限拦下的），访问其他命名空间返回 403，调用管理 API 也返回 403；`config-admin` 能读写配置，但不能注册服务（403）。所以 account 服务仍用 `svc-dev` 注册和读配置，只在写配置时用 `config-admin`。
+  - Nacos 3.3 的权限资源格式是 `<命名空间>:<分组>:<类型>/<名称>`，支持 `*`。控制台只能按整个命名空间授权，细粒度的资源要通过 API 授予。
+  - 用户、角色重复创建时返回 HTTP 500，所以脚本先查询列表再创建。
+  - Nacos 3 删除了 v1 / v2 OpenAPI（`/nacos/v1/cs/configs`、`/nacos/v2/cs/config` 都返回 404）；`config-admin` 可以通过 `POST /nacos/v3/admin/cs/config` 写配置（已实测），P6-T05 用这个接口。
+- 单元测试不连 Nacos：`@WebMvcTest` 中关闭 Nacos 配置与注册，并设置 `spring.config.on-not-found=ignore`，否则必选的 `nacos:hello.yaml` 导入会让测试上下文启动失败。服务本身仍然是必选导入，Nacos 不可用时启动失败。
+- 验证中的"在 Nacos 控制台修改配置"用 Nacos 管理 API 完成（控制台调用的也是它），效果相同；控制台中也能看到 `hello` 服务和 `hello.yaml`。验证后已把 `hello.greeting` 恢复为初始值。
+- `.run/`、`http/` 有了真实文件，删除了其中的 `.gitkeep`。
 
 ---
 
@@ -354,6 +374,6 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 - [ ] `scripts/dev.sh up core obs` 后全部容器 healthy
 - [ ] hello 注册到 Nacos，配置动态刷新生效
 - [ ] Grafana"服务实例"大盘显示 hello 的指标
-- [ ] 兼容性结论已记录（Q1），若不兼容已由用户决定方案
+- [x] 兼容性结论已记录（Q1），若不兼容已由用户决定方案
 - [ ] 内存实测已记录（Q10）
 - [ ] CI 工作流已提交

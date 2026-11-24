@@ -1,0 +1,15 @@
+// Temporary sample service (P0-T06, removed in P1-T09): checks that Spring Boot 4.1,
+// Spring Cloud 2025.1 and Spring Cloud Alibaba 2025.1 work together (design.md Q1 / A4).
+plugins {
+    id 'crypto-trading.spring-service'
+}
+
+dependencies {
+    implementation project(':libs:common-web')
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+}

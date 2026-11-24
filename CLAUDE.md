@@ -44,6 +44,11 @@
 
 新增服务时，在 `deploy/compose/prometheus/targets/*.json` 里加一条抓取目标。
 
+- `bootRun` 会把根目录 `.env.local` 读成环境变量（`crypto-trading.spring-service` 插件），服务配置里用 `${KEY}` 引用密钥；IntelliJ 运行配置（`.run/*.run.xml`）用 Gradle 类型执行 `bootRun`。
+- Nacos 初始配置放在 `deploy/nacos/<命名空间>/<Data ID>`（分组 `DEFAULT_GROUP`），`scripts/dev.sh up core` 只发布 Nacos 中还不存在的配置，不覆盖已有修改。服务用 `spring.config.import: nacos:<服务名>.yaml`（命名空间 `dev`）。
+- Nacos 账号：服务一律用 `svc-dev`（配置只读、注册读写，密码 `NACOS_SERVICE_PASSWORD`）；只有 account 写配置时用 `config-admin`；管理员 `nacos` 不给服务用。账号由 `scripts/dev.sh up core` 创建。
+- 动态刷新的配置用可变的 `@ConfigurationProperties` 类（不用 record）。不连 Nacos 的切片测试要关闭 `spring.cloud.nacos.config.enabled` / `discovery.enabled`，并设置 `spring.config.on-not-found=ignore`。
+
 ## 代码约定
 
 - 目录结构：`build-logic/`（约定插件）、`platform/`（BOM）、`libs/`、`services/<name>/`、`tools/alpaca-mock/`、`web/`、`deploy/`。

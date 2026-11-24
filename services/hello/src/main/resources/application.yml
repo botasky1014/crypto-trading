@@ -1,0 +1,29 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: hello
+  threads:
+    virtual:
+      enabled: true
+  config:
+    # Required import: startup fails if Nacos or the config is missing.
+    import: nacos:hello.yaml
+  cloud:
+    nacos:
+      # Namespace `dev` = Docker Compose environment (design.md 5.10). Created, together with
+      # the initial hello.yaml (deploy/nacos/dev/), by `scripts/dev.sh up core`.
+      # Account svc-dev (read config, register; set up by dev.sh). bootRun reads the password
+      # from .env.local; NACOS_USERNAME / NACOS_PASSWORD override both.
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: dev
+        username: ${NACOS_USERNAME:svc-dev}
+        password: ${NACOS_PASSWORD:${NACOS_SERVICE_PASSWORD:}}
+        file-extension: yaml
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: dev
+        username: ${NACOS_USERNAME:svc-dev}
+        password: ${NACOS_PASSWORD:${NACOS_SERVICE_PASSWORD:}}

@@ -1,6 +1,30 @@
 // Conventions for a runnable Spring Boot service (services/*, tools/alpaca-mock).
+import org.springframework.boot.gradle.tasks.run.BootRun
+
 plugins {
     id 'crypto-trading.java-conventions'
     id 'crypto-trading.test-conventions'
     id 'org.springframework.boot'
+}
+
+tasks.named('bootRun', BootRun).configure {
+    // Low-memory JVM settings for the 16GB machine (design.md 10.1).
+    jvmArgs('-Xmx256m', '-XX:+UseSerialGC')
+
+    // Local secrets (Nacos, database passwords, ...) come from the repository's .env.local, the same
+    // file that scripts/dev.sh uses for the middleware. Variables already set in the environment win.
+    // Resolved at execution time: an environment captured at configuration time would be stored in the
+    // configuration cache, and later changes to .env.local or the shell environment would be ignored.
+    def envFile = isolated.rootProject.projectDirectory.file('.env.local').asFile
+    doFirst {
+        environment(System.getenv())
+        if (envFile.isFile()) {
+            envFile.readLines().each { line ->
+                def matcher = line =~ /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/
+                if (matcher.matches() && !System.getenv(matcher.group(1))) {
+                    environment(matcher.group(1), matcher.group(2))
+                }
+            }
+        }
+    }
 }

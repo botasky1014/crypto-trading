@@ -1,0 +1,5 @@
+# Initial config of the temporary sample service `hello` (P0-T06, removed in P1-T09).
+# Published to namespace `dev`, group DEFAULT_GROUP by `scripts/dev.sh up core` only when it does
+# not exist yet; later edits are made in Nacos and are never overwritten by this file.
+hello:
+  greeting: Hello from Nacos

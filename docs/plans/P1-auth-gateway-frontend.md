@@ -256,7 +256,7 @@ git diff --stat web/src/shared/api/types.ts
 
 **目标：** 删除 P0 的 hello 服务。
 
-**实现要点：** 删除 `services/hello`、运行配置、HTTP 文件、Prometheus 目标与 Nacos 配置。
+**实现要点：** 删除 `services/hello`（以及 `settings.gradle` 中的 include）、运行配置 `.run/hello.run.xml`、HTTP 文件 `http/hello.http`、Prometheus 目标与 Nacos 配置（初始配置 `deploy/nacos/dev/hello.yaml`，以及 Nacos 命名空间 `dev` 中已发布的 `hello.yaml`）。
 
 **验证：** `./gradlew build` 通过；Prometheus 目标中不再有 hello。
 

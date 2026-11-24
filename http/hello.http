@@ -1,0 +1,5 @@
+### Current value of the Nacos config item hello.greeting (namespace dev, data ID hello.yaml).
+# Change it in the Nacos console (http://localhost:8849) and send again: the new value
+# is returned without restarting the service.
+GET http://localhost:8090/hello
+Accept: application/json

@@ -31,7 +31,18 @@
 
    首次运行会在 `.env.local` 中生成本地密码。Nacos 控制台：http://localhost:8849（用户 `nacos`，密码见 `.env.local` 的 `NACOS_ADMIN_PASSWORD`）。
 
-4. 其他命令见 [docs/plan.md](docs/plan.md) 第 5 节。
+   `up core` 同时会创建 Nacos 命名空间 `dev`，发布 `deploy/nacos/` 中的初始配置（已存在的不覆盖），并创建服务用的 Nacos 账号 `svc-dev`、`config-admin`（密码同样在 `.env.local`）。
+
+4. 启动示例服务 `hello`（临时服务，P1 删除），确认能读到 Nacos 配置：
+
+   ```bash
+   ./gradlew :services:hello:bootRun
+   curl -s localhost:8090/hello
+   ```
+
+   `bootRun` 会读取 `.env.local` 中的密钥。IntelliJ 里可以直接用运行配置 `hello`（`.run/hello.run.xml`）。
+
+5. 其他命令见 [docs/plan.md](docs/plan.md) 第 5 节。
 
 ## 目录
 
@@ -39,7 +50,11 @@
 | --- | --- |
 | `docs/` | 设计、计划、环境准备、验证记录 |
 | `scripts/` | 开发脚本（`doctor.sh`、`dev.sh`） |
+| `build-logic/`、`platform/` | Gradle 约定插件、版本平台 |
+| `libs/` | 公共库（`common-core`、`common-web`、`architecture-rules`） |
+| `services/` | 微服务（目前只有临时示例服务 `hello`） |
 | `deploy/compose/` | 本地 Docker Compose 中间件 |
+| `deploy/nacos/` | Nacos 初始配置（`<命名空间>/<Data ID>`） |
 | `http/` | IntelliJ HTTP Client 请求文件（`*.http`） |
 | `.run/` | 共享的 IntelliJ 运行配置 |
 
