@@ -914,22 +914,24 @@ flowchart LR
 
 ### 10.1 内存预算（本地 16GB）
 
-16GB 机器无法同时运行全部组件，按"**分阶段启动 + 低内存配置**"运行。以下为估算值，P0 实测后修正：
+16GB 机器无法同时运行全部组件，按"**分阶段启动 + 低内存配置**"运行。以下为估算值，已按 P0 实测修正（2026-11-24，详见 `docs/verification/memory.md`），后续阶段继续复测：
 
-| 组件 | 配置 | 估算内存 |
-| --- | --- | --- |
-| PostgreSQL（含 TimescaleDB） | `shared_buffers=128MB` | 0.4 GB |
-| Redis | `maxmemory 128mb` | 0.15 GB |
-| Kafka（单节点 KRaft） | 堆 512MB | 0.8 GB |
-| Apicurio Registry | 堆 256MB，存储用 PostgreSQL | 0.4 GB |
-| Nacos（单机模式） | 堆 384MB | 0.6 GB |
-| Keycloak（开发模式） | 堆 384MB | 0.6 GB |
-| Vault（dev 模式） | — | 0.1 GB |
-| 可观测性（Prometheus、Grafana、Loki、Tempo、Alloy、Collector，均单实例、短保留期） | Prometheus 保留 2 天 | 1.3 GB |
-| 8 个 Java 服务（每个 1 副本） | 堆 192–256MB，`-XX:+UseSerialGC`，虚拟线程 | 约 3.2 GB |
-| alpaca-mock | 堆 128MB | 0.25 GB |
-| 合计（中间件 + 服务） | | 约 7.8 GB |
-| 操作系统、IDE、浏览器 | | 约 5–6 GB |
+| 组件 | 配置 | 估算内存 | P0 实测（进程实际占用） |
+| --- | --- | --- | --- |
+| PostgreSQL（含 TimescaleDB） | `shared_buffers=128MB` | 0.4 GB | 16 MiB（空库，接入服务后会上涨） |
+| Redis | `maxmemory 128mb` | 0.15 GB | 14 MiB（空库） |
+| Kafka（单节点 KRaft） | 堆 512MB | 0.8 GB | — |
+| Apicurio Registry | 堆 256MB，存储用 PostgreSQL | 0.4 GB | — |
+| Nacos（单机模式） | 堆 384MB，限制非堆与 malloc arena | **0.75 GB**（原估 0.6 GB） | 712 MiB，运行中缓慢上涨 |
+| Keycloak（开发模式） | 堆 384MB | 0.6 GB | — |
+| Vault（dev 模式） | — | 0.1 GB | 8 MiB |
+| 可观测性（Prometheus、Grafana、Loki、Tempo、Alloy、Collector，均单实例、短保留期） | Prometheus 保留 2 天 | 1.3 GB | Prometheus 54 MiB + Grafana 380 MiB（6 个中的 2 个；Grafana 13 约 0.4 GB，P8 复测） |
+| 8 个 Java 服务（每个 1 副本） | 堆 192–256MB，`-XX:+UseSerialGC`，虚拟线程 | 约 3.2 GB | 示例服务 hello RSS 234 MiB |
+| alpaca-mock | 堆 128MB | 0.25 GB | — |
+| 合计（中间件 + 服务） | | 约 8 GB | |
+| 操作系统、IDE、浏览器 | | 约 5–6 GB | |
+
+**测量口径：** 容器内存以 cgroup `memory.stat` 的 `anon`（进程自己申请的内存）为准；`docker stats` 还包含可回收的页缓存，会偏高（P0 中 Vault 读数 135 MiB，实际只有 8 MiB）。Java 服务在宿主机运行时看进程 RSS。
 
 ### 10.2 本地运行模式
 
@@ -1320,7 +1322,7 @@ web/src/
 | Q7 | MyBatis-Plus 在 Boot 4 下的测试切片注解名称 | 低 | P1 确认 |
 | Q8 | 成交回报事件类型完整列表与字段 | 中 | P2 以官方文档为准补全映射表 |
 | Q9 | Keycloak 无 LTS，需跟随升级 | 低 | realm 配置代码化，升级走 Renovate |
-| Q10 | 16GB 内存下各模式的实际占用 | 中 | P0 实测并修正 10.1；不够时先关闭 Tempo 和 Kafka UI，仍不够再转到备用 EC2（10.6） |
+| Q10 | 16GB 内存下各模式的实际占用 | 中 | P0 实测并修正 10.1；不够时先关闭 Tempo 和 Kafka UI，仍不够再转到备用 EC2（10.6）。**P0 已实测（2026-11-24）：** 合计低于估算，Nacos 上调为 0.75 GB；Keycloak、Kafka 和完整可观测性在 P1、P3、P8 复测 |
 | Q11 | 共享 Alpaca 账户后，同一币种多个用户的挂单在 Alpaca 侧属于同一账户，Alpaca 是否会因"自成交防护"拒绝本账户买卖单相互成交 | 中 | P2 实测（同时挂同价位买单和卖单）；如被拒，风控增加"同一交易对不允许平台内买卖价交叉"规则（届时另行决策） |
 
 ---

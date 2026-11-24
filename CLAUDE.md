@@ -27,6 +27,7 @@
 ## 环境限制
 
 - 本机是 Apple 芯片 Mac，16GB 内存。只启动当前任务需要的 Compose profile，所有镜像都要支持 `linux/arm64`。
+- 内存实测记在 `docs/verification/memory.md`，以 cgroup `memory.stat` 的 `anon` 为准（`docker stats` 含页缓存，偏高），两种读数都记录；Java 服务在宿主机运行时看 RSS。和 design.md 10.1 对比。
 - JDK 25（Temurin，由 Gradle Toolchain 管理；Gradle Daemon 也固定为 Temurin 25，见 `gradle/gradle-daemon-jvm.properties`）；Gradle 9.x，Groovy DSL；Node LTS + pnpm。
 - 版本只在 `gradle/libs.versions.toml` 里定义，每个版本都要注明来源；子项目依赖不写版本，统一由 `platform` 管理。模块通过 `build-logic` 的约定插件构建：服务用 `crypto-trading.spring-service`，库用 `crypto-trading.java-conventions`（需要测试时再加 `crypto-trading.test-conventions`）。
 

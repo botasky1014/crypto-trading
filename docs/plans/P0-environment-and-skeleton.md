@@ -381,7 +381,7 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 
 **Checklist：**
 - [x] `actionlint` 无错误
-- [ ] 用户推送后工作流通过（由用户确认）
+- [x] 用户推送后工作流通过（由用户确认，2026-11-24）
 
 **说明（2026-11-24 完成时）：**
 - 运行器 `ubuntu-24.04`，超时 30 分钟，`permissions: contents: read`；同一分支或 PR 有新的运行时取消旧的。
@@ -391,7 +391,7 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 - 测试报告（`build/reports/tests/`、`build/test-results/`）和覆盖率报告（`build/reports/jacoco/`）分成两个 artifact 上传，保留 14 天；构建失败时也上传（`!cancelled()`）。
 - Gradle Daemon（`gradle/gradle-daemon-jvm.properties`）和 Toolchain 都能直接用 `setup-java` 装好的 Temurin 25，不需要额外下载。
 - 验证：本机用 Homebrew 安装 actionlint 1.7.12，`actionlint` 对 `ci.yml` 报 0 个错误（同时用 shellcheck 检查了 `run` 脚本）；故意把运行器写成不存在的 `ubuntu-2404`，actionlint 能报出来。本机执行与 CI 相同的命令（加 `--rerun-tasks`）构建成功，5 个模块都生成了测试和覆盖率报告；目前还没有集成测试，`integrationTest` 均为 `NO-SOURCE`。`gradlew` 和 `scripts/*.sh` 在 git 中都是可执行权限（`100755`），Linux 运行器上能直接执行。
-- 工作流在 GitHub 上是否通过，需要用户推送后确认。
+- 用户推送后确认：GitHub Actions 上的 `CI` 工作流通过（2026-11-24）。
 
 ---
 
@@ -408,17 +408,22 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 **停止条件：** 实测值比估算高出 30% 以上，向用户报告并给出调整建议（降低堆大小、减少组件或提前使用备用 EC2）。
 
 **Checklist：**
-- [ ] 实测表格完成
-- [ ] 与估算的差异已说明
+- [x] 实测表格完成
+- [x] 与估算的差异已说明
+
+**说明（2026-11-24 完成时）：**
+- 6 个容器连续运行约 3 小时后测量，hello 预热 1,000 次请求，再每分钟读一次、共 4 次，读数稳定。表格和分析见 `docs/verification/memory.md` 的"P0-T10"一节。从 P0-T07 起表格同时记录 `docker stats`（含可回收的页缓存）和 cgroup `anon`（进程真实占用）两种口径。
+- 结果：P0 运行的组件合计 1,335 MiB（`docker stats`）/ 984 MiB（anon），估算约 1.65 GB，低 21% / 42%；可观测性目前只有 2 个组件，约 446 MiB，占 1.3 GB 预算的 1/3。
+- **停止条件：用户确认不算触发（2026-11-24）。** 合计没有超出；按单个组件、`docker stats` 口径 Nacos +38%、Vault +32%，但 Vault 几乎全是页缓存（进程只用 8 MiB），Nacos 的真实占用 712 MiB，比估算 0.6 GB 高 16%。按用户决定修正了 design.md 10.1：Nacos 改为 0.75 GB，合计约 8 GB，增加"P0 实测"列和测量口径说明；Q10 记录了结论。
 
 ---
 
 ## P0 阶段验收
 
-- [ ] `./gradlew build` 通过
-- [ ] `scripts/dev.sh up core obs` 后全部容器 healthy
-- [ ] hello 注册到 Nacos，配置动态刷新生效
-- [ ] Grafana"服务实例"大盘显示 hello 的指标
+- [x] `./gradlew build` 通过
+- [x] `scripts/dev.sh up core obs` 后全部容器 healthy
+- [x] hello 注册到 Nacos，配置动态刷新生效
+- [x] Grafana"服务实例"大盘显示 hello 的指标
 - [x] 兼容性结论已记录（Q1），若不兼容已由用户决定方案
-- [ ] 内存实测已记录（Q10）
-- [ ] CI 工作流已提交
+- [x] 内存实测已记录（Q10）；用户确认不触发停止条件，design.md 10.1 已按实测修正
+- [x] CI 工作流已提交，GitHub Actions 上通过（用户确认）
