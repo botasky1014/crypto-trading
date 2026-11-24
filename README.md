@@ -42,7 +42,15 @@
 
    `bootRun` 会读取 `.env.local` 中的密钥。IntelliJ 里可以直接用运行配置 `hello`（`.run/hello.run.xml`）。
 
-5. 其他命令见 [docs/plan.md](docs/plan.md) 第 5 节。
+5. 查看指标：
+
+   ```bash
+   scripts/dev.sh up core obs
+   ```
+
+   Prometheus：http://localhost:9090/targets；Grafana：http://localhost:3000（用户 `admin`，密码见 `.env.local` 的 `GRAFANA_ADMIN_PASSWORD`），首页就是 `Service Instances` 大盘。
+
+6. 其他命令见 [docs/plan.md](docs/plan.md) 第 5 节。
 
 ## 目录
 
@@ -51,10 +59,11 @@
 | `docs/` | 设计、计划、环境准备、验证记录 |
 | `scripts/` | 开发脚本（`doctor.sh`、`dev.sh`） |
 | `build-logic/`、`platform/` | Gradle 约定插件、版本平台 |
-| `libs/` | 公共库（`common-core`、`common-web`、`architecture-rules`） |
+| `libs/` | 公共库（`common-core`、`common-web`、`common-observability`、`architecture-rules`） |
 | `services/` | 微服务（目前只有临时示例服务 `hello`） |
 | `deploy/compose/` | 本地 Docker Compose 中间件 |
 | `deploy/nacos/` | Nacos 初始配置（`<命名空间>/<Data ID>`） |
+| `deploy/grafana/` | Grafana 数据源与大盘（启动时自动导入） |
 | `http/` | IntelliJ HTTP Client 请求文件（`*.http`） |
 | `.run/` | 共享的 IntelliJ 运行配置 |
 

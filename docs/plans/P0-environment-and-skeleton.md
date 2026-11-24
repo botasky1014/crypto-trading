@@ -295,10 +295,26 @@ for i in $(seq 1 50); do curl -s localhost:8090/hello >/dev/null; done
 浏览器：http://localhost:9090/targets 中 hello 为 UP；http://localhost:3000 打开"服务实例"大盘（`Service Instances`），看到 hello 的 JVM 指标和刚才 50 次请求。
 
 **Checklist：**
-- [ ] Prometheus 目标为 UP
-- [ ] 大盘以文件形式预置，重建容器后仍在
-- [ ] 日志为 JSON 格式
-- [ ] 内存占用更新到 `docs/verification/memory.md`
+- [x] Prometheus 目标为 UP
+- [x] 大盘以文件形式预置，重建容器后仍在
+- [x] 日志为 JSON 格式
+- [x] 内存占用更新到 `docs/verification/memory.md`
+
+**说明（2026-11-24 完成时）：**
+- 镜像：`prom/prometheus:v3.16.0`、`grafana/grafana:13.3.1`，均有 `linux/arm64`，端口只绑定 `127.0.0.1`。Grafana 管理员 `admin`，密码是 `.env.local` 的 `GRAFANA_ADMIN_PASSWORD`（`dev.sh up` 自动生成）；关闭注册、匿名访问和对外的更新检查，未登录访问接口返回 401。
+- `common-observability` 通过 `EnvironmentPostProcessor`（`ObservabilityDefaults`）提供默认配置，优先级最低，服务自己的配置、Nacos、环境变量都能覆盖。服务只需加依赖：
+  - 暴露 `health`、`info`、`prometheus` 三个端点，其余不暴露（`/actuator/env` 等返回 404）；
+  - `management.endpoint.health.probes.enabled=true`：在 Kubernetes 之外也有 `liveness` / `readiness` 分组，Compose 和 k3d 用同一套探针；
+  - 公共标签 `application`（`spring.application.name`）、`instance`（`<地址>:<端口>`，本地是 Spring Cloud 解析出的 IP，和注册到 Nacos 的地址一致）；`http.server.requests` 开启直方图分桶，大盘可以跨实例算 P50 / P99；
+  - 控制台日志为 ECS JSON（`logging.structured.format.console=ecs`）。
+  - Boot 4 把指标拆成了单独的模块，所以除了 `spring-boot-starter-actuator`，还要依赖 `spring-boot-starter-micrometer-metrics`；测试里要保留 Prometheus 端点需加 `@AutoConfigureMetrics`。
+- **`instance` 标签与 Prometheus。** Prometheus 默认会用抓取地址（`host.docker.internal:8090`）覆盖 `instance`，所以 `services` 作业设置了 `honor_labels: true`，保留服务自己报的值。代价是 Prometheus 自己生成的 `up` 指标的 `instance` 仍是抓取地址，和服务指标不一样；大盘不用 `up`。Pod 的 `instance` 取值在 P9 再确认。design.md 9.2 的第三个公共标签 `namespace` 在 Compose 阶段没有意义，P9 接入 k3d 时加入。
+- **日志中仍有少量非 JSON 行。** Nacos 客户端在加载 `nacos:` 配置导入时会打印几行日志，这时 Spring Boot 还没初始化日志系统，只能用默认格式输出；JDK 的 `sun.misc.Unsafe` 提示也不是 JSON（见 compatibility.md）。日志系统初始化之后全部是 JSON。P8 用 Alloy 采集日志时需要容忍这几行。
+- 内存：Grafana 13 启动后 anon 约 240 MiB，打开大盘后约 350 MiB，原定的 384 MiB 上限余量不够，提高到 512 MiB；Prometheus 约 50 MiB。读数和"`docker stats` 含页缓存"的说明见 `docs/verification/memory.md`。
+- Prometheus：`file_sd` 读取 `deploy/compose/prometheus/targets/*.json`，30 秒刷新，新增服务不用重启；保留 2 天；`GOMEMLIMIT=320MiB`。
+- Grafana：数据源和大盘都从仓库预置（`deploy/grafana/provisioning/`、`deploy/grafana/dashboards/`），大盘挂载到 `/etc/grafana/dashboards`，和数据卷分开；界面上的修改不会写回文件，要改大盘就改 JSON。默认首页就是 `Service Instances`。
+- `Service Instances` 大盘 v0：变量 `Service`（`application`）和 `Instance`（可多选）；分区 Summary（实例数、运行时长、启动时间、堆使用率）、CPU、JVM memory（堆 / 非堆及各内存池）、Garbage collection、Threads、HTTP（请求量和 P50 / P99，排除 `/actuator`）。虚拟线程数、连接池、重启次数等面板在 P8 补齐。
+- 验证：Prometheus 中 `services` 作业的 hello 目标为 `up`；50 次请求后 `http_server_requests_seconds_count{uri="/hello"}` 为 50；把大盘的每个查询代入 `application="hello"` 后在 Prometheus 中执行，全部有数据；删除 Grafana 容器**和数据卷**后重新启动，大盘仍然存在（重新从文件预置）。
 
 ---
 

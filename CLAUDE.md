@@ -42,7 +42,7 @@
 | 启动服务 | `./gradlew :services:<name>:bootRun` |
 | 前端开发 | `pnpm -C web dev` |
 
-新增服务时，在 `deploy/compose/prometheus/targets/*.json` 里加一条抓取目标。
+新增服务时，在 `deploy/compose/prometheus/targets/*.json` 里加一条抓取目标（`host.docker.internal:<端口>`），并依赖 `libs:common-observability`（Actuator、Prometheus 指标、公共标签、ECS JSON 日志，零配置）。Grafana 大盘只改 `deploy/grafana/dashboards/*.json`，标题和面板名用英文。
 
 - `bootRun` 会把根目录 `.env.local` 读成环境变量（`crypto-trading.spring-service` 插件），服务配置里用 `${KEY}` 引用密钥；IntelliJ 运行配置（`.run/*.run.xml`）用 Gradle 类型执行 `bootRun`。
 - Nacos 初始配置放在 `deploy/nacos/<命名空间>/<Data ID>`（分组 `DEFAULT_GROUP`），`scripts/dev.sh up core` 只发布 Nacos 中还不存在的配置，不覆盖已有修改。服务用 `spring.config.import: nacos:<服务名>.yaml`（命名空间 `dev`）。

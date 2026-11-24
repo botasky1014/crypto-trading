@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation project(':libs:common-web')
+    implementation project(':libs:common-observability')
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
     implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'

@@ -4,7 +4,7 @@
 # Profiles (design.md 10.2):
 #   core  PostgreSQL + TimescaleDB, Redis, Nacos, Vault   (Keycloak is added in P1)
 #   mq    Kafka, Apicurio, Kafka UI                       (P3)
-#   obs   Prometheus, Grafana, ...                        (P0-T07, P8)
+#   obs   Prometheus, Grafana (P0-T07); OTel Collector, Tempo, Loki, Alloy in P8
 #   mock  alpaca-mock                                     (P2)
 #
 # All images are pinned and support linux/arm64. Ports are published on 127.0.0.1 only.
@@ -143,7 +143,69 @@ services:
       timeout: 3s
       retries: 20
 
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    profiles: [obs]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Short retention for the 16GB machine (design.md 10.1).
+      - --storage.tsdb.retention.time=2d
+    environment:
+      # Soft limit for the Go runtime, below the container limit.
+      GOMEMLIMIT: 320MiB
+    # Services run on the host (IDE / bootRun); targets are host.docker.internal:<port>.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  grafana:
+    image: grafana/grafana:13.3.1
+    profiles: [obs]
+    environment:
+      # Local admin account until P1-T08 switches Grafana to Keycloak single sign-on.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in .env.local}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/service-instances.json
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # Data source and dashboards are provisioned from the repository on every start.
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    # ~240 MiB of process memory after start (P0-T07); 512m leaves room for page cache and growth.
+    mem_limit: 512m
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
 volumes:
   postgres-data:
   redis-data:
   nacos-data:
+  prometheus-data:
+  grafana-data:

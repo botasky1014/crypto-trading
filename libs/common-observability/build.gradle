@@ -1,0 +1,20 @@
+// Observability conventions v0 (P0-T07): Actuator endpoints, Prometheus metrics with common tags,
+// health groups and ECS JSON logs. A service only needs the dependency; defaults are applied by
+// ObservabilityDefaults and can be overridden in the service's own configuration.
+// Tracing (OpenTelemetry), exemplars and the business metric facades are added in P8.
+plugins {
+    id 'java-library'
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+}
+
+dependencies {
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+    api 'org.springframework.boot:spring-boot-starter-micrometer-metrics'
+    // No version: managed by the Micrometer BOM that the Spring Boot BOM imports.
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-micrometer-metrics-test'
+}

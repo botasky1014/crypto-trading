@@ -1,0 +1,13 @@
+apiVersion: 1
+
+# Dashboards are files in deploy/grafana/dashboards/ (design.md 9.1). Changes made in the UI are
+# not saved back: edit the JSON in the repository instead.
+providers:
+  - name: crypto-trading
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false
