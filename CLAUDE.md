@@ -68,6 +68,8 @@
 - 用到 MapStruct 的模块自己加 `implementation 'org.mapstruct:mapstruct'`，并在该模块加 `-Amapstruct.unmappedTargetPolicy=ERROR`（注解处理器已由约定插件配置）。
 - 金额舍入用 `common-core` 的 `Decimals.roundDown`（按最小单位向零截断），比较用 `Decimals.eq/gt/...`，不要用 `BigDecimal.equals`。
 - 业务错误：各服务定义 `enum XxxErrorCode implements ErrorCode`，抛出 `BusinessException`，由 `common-web` 统一转成 Problem Details。
+- 安全：依赖 `common-web` 就自动成为 Resource Server（Keycloak JWT，默认规则见 design.md 8.2），用户 ID 一律取 `CurrentUser.get().id()`（JWT `sub`）。控制器测试用 `@WebMvcTest` + spring-security-test 的 `jwt()`（依赖 `spring-boot-starter-security-oauth2-resource-server-test`），切片里同样有安全规则和 Problem Details。
+- 数据访问：依赖 `common-mybatis`，实体继承 `BaseEntity`（审计字段自动填充 + `@Version`）；只用 wrapper 的更新不会自动填充。Mapper 测试用 `@MybatisPlusTest` + `@AutoConfigureTestDatabase(replace = NONE)` + Testcontainers PostgreSQL，放在 `integrationTest`（写法见 `docs/verification/compatibility.md`）。
 - **多语言与代码语言**（design.md 12.4）：
   - 前端所有页面必须支持中英文切换，文案全部走 vue-i18n，不硬编码。
   - 代码里只能用英文，不能出现任何中文：注释、日志、异常信息、配置、脚本、SQL、测试名和测试数据都算代码。唯一例外是 `web/src/locales/zh-CN.*` 语言包；Markdown 文档不算代码，继续用中文。

@@ -24,7 +24,8 @@ dependencyResolutionManagement {
 rootProject.name = 'crypto-trading'
 
 include 'platform'
-include 'libs:common-core', 'libs:common-web', 'libs:common-observability', 'libs:architecture-rules'
+include 'libs:common-core', 'libs:common-web', 'libs:common-mybatis', 'libs:common-observability',
+        'libs:architecture-rules'
 
 // Temporary sample service for the version compatibility check (P0-T06); removed in P1-T09.
 include 'services:hello'

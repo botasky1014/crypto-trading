@@ -2,6 +2,7 @@ package com.cryptotrading.common.web;
 
 import com.cryptotrading.common.core.error.BusinessException;
 import com.cryptotrading.common.core.error.ErrorCode;
+import com.cryptotrading.common.web.security.CurrentUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -63,6 +64,21 @@ public class TestApplication {
         @GetMapping("/sample/unexpected-error")
         void unexpectedError() {
             throw new IllegalStateException("db password=hunter2");
+        }
+
+        @GetMapping("/api/me")
+        CurrentUser me() {
+            return CurrentUser.get();
+        }
+
+        @GetMapping("/api/admin/ping")
+        String adminPing() {
+            return "admin";
+        }
+
+        @GetMapping("/internal/ping")
+        String internalPing() {
+            return "internal";
         }
 
         @GetMapping(path = "/sample/version", version = "1")

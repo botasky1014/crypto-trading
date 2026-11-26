@@ -1,6 +1,7 @@
 package com.cryptotrading.hello.controller;
 
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,7 +35,8 @@ class HelloControllerTest {
     void returnsTheCurrentGreeting() throws Exception {
         given(greetingService.currentGreeting()).willReturn(new GreetingResponse("Hello from Nacos"));
 
-        mockMvc.perform(get("/hello"))
+        // common-web secures every endpoint (P1-T02); a mock JWT stands in for a Keycloak token.
+        mockMvc.perform(get("/hello").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.greeting").value("Hello from Nacos"));
     }

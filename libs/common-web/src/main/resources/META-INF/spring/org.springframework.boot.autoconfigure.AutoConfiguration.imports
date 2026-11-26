@@ -1,1 +1,2 @@
 com.cryptotrading.common.web.CommonWebAutoConfiguration
+com.cryptotrading.common.web.security.CommonSecurityAutoConfiguration

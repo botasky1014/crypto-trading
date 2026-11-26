@@ -799,6 +799,7 @@ realm 配置导出为 `deploy/keycloak/realm-crypto-trading.json`，启动时自
 2. gateway 校验 JWT，按用户限流，再把请求连同原 `Authorization` 头原样转发给后端服务。
 3. 各服务作为 Resource Server **再次校验** JWT，自定义 `JwtAuthenticationConverter` 映射 Keycloak 角色。
 4. 资源级授权：所有查询和操作以 JWT 的 `sub` 作为用户 ID，不接受请求参数中的 userId；`/api/admin/**` 要求 `admin` 角色。
+5. 匿名可访问的只有平台端点：`/actuator/health/**`、`/actuator/info`、`/actuator/prometheus`（Prometheus 不带令牌抓取；K8s 中由 NetworkPolicy 限制访问来源）和 `/v3/api-docs/**`；`/internal/**` 在 P4 之前全部拒绝，之后只对服务账号开放。
 
 ### 8.3 平台 Alpaca Key 保护
 
@@ -1261,7 +1262,7 @@ web/src/
 | --- | --- | --- | --- |
 | 单元 | JUnit + AssertJ + Mockito | 状态机、冻结规则、风控规则、精度舍入、三种策略 | 每次提交 |
 | 属性 | jqwik | 账本不变式 1–3 | 每次提交 |
-| 切片 | `@WebMvcTest`、MyBatis-Plus 测试切片、`@JsonTest` | 控制器、Mapper、序列化 | 每次提交 |
+| 切片 | `@WebMvcTest`、`@MybatisPlusTest`（Testcontainers PostgreSQL）、`@JsonTest` | 控制器、Mapper、序列化 | 每次提交 |
 | 集成 | Testcontainers + alpaca-mock | 下单 Saga、UNKNOWN 恢复、回报乱序、Leader 切换、开户、重置 | 每次提交 |
 | 故障 | Toxiproxy | 网络延迟、断连 | 每次提交 |
 | 契约 | Spring Cloud Contract | order ↔ ledger、account ↔ ledger REST；`order.events` 消息 | 每次提交 |
@@ -1319,7 +1320,7 @@ web/src/
 | Q4 | 模拟账户初始权益和能否调整（A5），决定可开户人数 | 中 | P2 确认；资金池余额在 Grafana 可见并有告警 |
 | Q5 | 模拟盘是否收取加密货币手续费 | 低 | 已用"先估后调"规避 |
 | Q6 | 免费加密货币行情额度的具体限制 | 中 | P2 确认，默认 5 个交易对 |
-| Q7 | MyBatis-Plus 在 Boot 4 下的测试切片注解名称 | 低 | P1 确认 |
+| Q7 | MyBatis-Plus 在 Boot 4 下的测试切片注解名称 | 低 | P1 确认。**已确认（P1-T02）：** `@MybatisPlusTest`（`mybatis-plus-spring-boot4-starter-test`），配合 Testcontainers PostgreSQL，见 `docs/verification/compatibility.md` |
 | Q8 | 成交回报事件类型完整列表与字段 | 中 | P2 以官方文档为准补全映射表 |
 | Q9 | Keycloak 无 LTS，需跟随升级 | 低 | realm 配置代码化，升级走 Renovate |
 | Q10 | 16GB 内存下各模式的实际占用 | 中 | P0 实测并修正 10.1；不够时先关闭 Tempo 和 Kafka UI，仍不够再转到备用 EC2（10.6）。**P0 已实测（2026-11-24）：** 合计低于估算，Nacos 上调为 0.75 GB；Keycloak、Kafka 和完整可观测性在 P1、P3、P8 复测 |

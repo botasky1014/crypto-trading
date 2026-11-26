@@ -59,7 +59,7 @@
 | `docs/` | 设计、计划、环境准备、验证记录 |
 | `scripts/` | 开发脚本（`doctor.sh`、`dev.sh`） |
 | `build-logic/`、`platform/` | Gradle 约定插件、版本平台 |
-| `libs/` | 公共库（`common-core`、`common-web`、`common-observability`、`architecture-rules`） |
+| `libs/` | 公共库（`common-core`、`common-web`、`common-mybatis`、`common-observability`、`architecture-rules`） |
 | `services/` | 微服务（目前只有临时示例服务 `hello`） |
 | `deploy/compose/` | 本地 Docker Compose 中间件 |
 | `deploy/keycloak/` | Keycloak realm 配置（启动时自动导入） |

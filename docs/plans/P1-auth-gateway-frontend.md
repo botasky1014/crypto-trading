@@ -96,9 +96,45 @@
 预期：JWT 角色映射、`CurrentUser`、自动填充均有测试并通过。
 
 **Checklist：**
-- [ ] 角色映射测试覆盖 user、admin、无角色
-- [ ] 自动填充测试覆盖"有用户"和"系统任务"两种情况
-- [ ] Q7 结论已记录
+- [x] 角色映射测试覆盖 user、admin、无角色
+- [x] 自动填充测试覆盖"有用户"和"系统任务"两种情况
+- [x] Q7 结论已记录
+
+**说明（2026-11-26 完成时）：**
+- **`libs/common-web` 的安全配置**（`security/` 包，自动配置，服务只需依赖 common-web）：
+  - common-web 以 `api` 依赖引入 `spring-boot-starter-security-oauth2-resource-server`。这样业务服务不会因为漏加依赖而变成没有安全保护；P1-T04 的 WebFlux gateway 本来也要用 Resource Server，它的响应式安全链自己配置，servlet 规则不会生效（按 servlet 应用条件启用）。
+  - `issuer-uri` 默认是 `http://localhost:8180/realms/crypto-trading`（`SecurityDefaults`，最低优先级，服务配置或环境变量可以覆盖，P9 要覆盖）。公钥在收到第一个令牌时才去取，Keycloak 没起来时服务照样能启动。
+  - `KeycloakJwtAuthenticationConverter`：`realm_access.roles` 里的每个角色都变成 `ROLE_<大写>`（`-` 换成 `_`），所以 `user` → `ROLE_USER`、`admin` → `ROLE_ADMIN`。Keycloak 自带的 `offline_access` 等角色也会映射，但没有规则用到它们。`scope` 照常映射成 `SCOPE_*`，留给 P4 的服务账号（`internal.ledger` 等）。principal 名称取 `sub`。另外 Spring Security 7 自己还会加一个 `FACTOR_BEARER` 权限（新的多因素认证模型），不影响角色判断。
+  - `CurrentUser`（record）：`id`（`sub`）、`username`（`preferred_username`）、`email`（可能为空）。`CurrentUser.get()` 在没有登录用户时抛 `UNAUTHORIZED`；`find()` 返回 `Optional`；`from(Jwt)` 配合 `@AuthenticationPrincipal Jwt` 使用。
+  - 默认规则按顺序是：
+    - `OPTIONS` 预检请求放行；
+    - `/actuator/health/**`、`/actuator/info`、`/actuator/prometheus`、`/v3/api-docs/**`、`/error` 匿名访问；
+    - `/internal/**` 全部拒绝；
+    - `/api/admin/**` 需要 `ADMIN`；
+    - 其余请求需要登录。
+    
+    无状态，不建会话，关闭 CSRF（只用 Bearer 令牌）。`/actuator/prometheus` 和 `/actuator/info` 是计划之外新加的匿名路径：不放行的话，Prometheus 抓指标会拿到 401。这是用户的决定（方案"匿名放行"），已写进 design.md 8.2。服务如果需要不同的规则，自己定义一个 `SecurityFilterChain` bean，默认的就不再生效。
+  - 401 / 403 也返回 Problem Details（`ProblemDetailsSecurityHandler`，`code` 是 `UNAUTHORIZED` / `FORBIDDEN`，带 `traceId`）。安全失败发生在过滤器链里，到不了 `@RestControllerAdvice`，所以单独实现。RFC 6750 规定的 `WWW-Authenticate` 头仍由 Spring 设置；Spring Security 7 会在头里加 `resource_metadata="…/.well-known/oauth-protected-resource"`（RFC 9728），这个元数据端点本身也匿名可访问，是框架的默认行为。
+  - **控制器切片测试同样生效：** common-web 把自己注册到了 `@WebMvcTest` 的自动配置列表（`META-INF/spring/org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest.imports`）。所以 `@WebMvcTest` 里也有安全规则、Problem Details 和 JSON 约定，P1-T03 直接用 spring-security-test 的 `jwt()` 即可（见 `WebMvcSliceTest`）。依赖是 `testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'`。
+  - 原有的 `ProblemDetailsTest` 和 `ApiVersioningTest` 加了 `@WithMockUser`，因为示例接口现在需要登录。`hello` 的控制器测试加了 `jwt()`；`hello` 的 `/hello` 现在需要令牌。
+- **`libs/common-mybatis`**（新模块，自动配置）：
+  - 依赖 `mybatis-plus-spring-boot4-starter` 和 `mybatis-plus-jsqlparser`。从 3.5.9 起，分页插件和防全表更新删除插件都在后者里，不加就找不到这两个类。
+  - 插件按 MyBatis-Plus 推荐的顺序注册：分页（`POSTGRE_SQL`）→ 乐观锁 → 防全表更新删除。
+  - 自动填充 `AuditFieldsMetaObjectHandler`：
+    - 插入时写 `createdAt`、`createdBy`、`updatedAt`、`updatedBy`，`version` 为空时设为 0；
+    - 更新时写 `updatedAt`、`updatedBy`；
+    - 总是覆盖已有值，调用方伪造不了审计字段。另一个原因是 MyBatis-Plus 的 `strictUpdateFill` 遇到已有值会跳过，查出来再更新的实体就不会刷新 `updatedAt`；
+    - 时间截断到微秒（PostgreSQL `TIMESTAMPTZ` 的精度），使用 `Clock` bean（没有就用 UTC 系统时钟）。
+  - 执行者：`ActorProvider`。默认实现读取 Spring Security 上下文的 principal 名称（也就是 `sub`）；没有登录用户或者是匿名用户时，返回 `system:<spring.application.name>`。P6 的 `AuditContext.runAsSystem("system:xxx")` 替换这个 bean 即可。common-mybatis 对 spring-security 是 `compileOnly`：classpath 上没有 Security 时，一律返回系统执行者。
+  - `BaseEntity`：四个审计字段（`Instant` / `String`）加 `@Version Long version`，对应的 DDL 写在类注释里。`created_by` / `updated_by` 用 `VARCHAR(64)`，因为 `sub` 是 UUID 字符串。**限制：** 只有传实体的写操作会自动填充（`insert`、`updateById`、`update(entity, wrapper)`）；只用 wrapper 的更新和手写 SQL 要自己设置 `updated_*`。
+- **Q7 结论：** MyBatis-Plus 3.5.18.1 提供 `mybatis-plus-spring-boot4-starter-test`，切片注解是 `@MybatisPlusTest`（`com.baomidou.mybatisplus.test.autoconfigure`）。配合 `@AutoConfigureTestDatabase(replace = NONE)`、Testcontainers PostgreSQL（`@ServiceConnection`，镜像和 Compose 相同）和 Flyway 建表，放在 `integrationTest` 里。common-mybatis 把自己注册到了 `@MybatisPlusTest` 的自动配置列表，所以切片测试里的插件和自动填充和服务里一样。详见 `docs/verification/compatibility.md`。
+- 验证：`./gradlew :libs:common-web:test :libs:common-mybatis:test` 通过：common-web 47 个测试（角色映射 5、`CurrentUser` 6、安全规则 15、切片 3 等），common-mybatis 11 个（自动填充 7，覆盖有用户、系统任务、匿名用户、伪造字段等情况）。`./gradlew :libs:common-mybatis:integrationTest` 7 个测试通过（真实 PostgreSQL 上的填充、乐观锁、分页、防全表操作）。`./gradlew build` 通过。另外用真实 Keycloak 令牌（curl 走 alice / admin 的登录表单）调用 `hello`，结果如下：
+  - 不带令牌：401 Problem Details；
+  - alice 的令牌：200；篡改过的令牌：401；
+  - alice 访问 `/api/admin/**`：403；admin 能通过安全检查；
+  - admin 访问 `/internal/**`：403；
+  - `/actuator/health`、`/prometheus` 匿名可访问：200；
+  - 启动日志里没有 WARN / ERROR。
 
 ---
 

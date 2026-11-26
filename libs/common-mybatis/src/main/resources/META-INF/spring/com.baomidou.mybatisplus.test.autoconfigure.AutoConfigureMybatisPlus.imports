@@ -1,0 +1,2 @@
+# Mapper slice tests (@MybatisPlusTest) get the same plugins and auto-fill as the service.
+com.cryptotrading.common.mybatis.CommonMybatisAutoConfiguration

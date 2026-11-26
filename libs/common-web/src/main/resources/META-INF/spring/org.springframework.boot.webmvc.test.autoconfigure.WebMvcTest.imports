@@ -1,0 +1,3 @@
+# Controller slice tests (@WebMvcTest) get the same JSON conventions, Problem Details and security rules.
+com.cryptotrading.common.web.CommonWebAutoConfiguration
+com.cryptotrading.common.web.security.CommonSecurityAutoConfiguration

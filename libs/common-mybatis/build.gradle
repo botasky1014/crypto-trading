@@ -1,0 +1,32 @@
+// MyBatis-Plus conventions (design.md 6.1): pagination, optimistic locking and the
+// full-table update / delete guard; auto-fill of the audit columns; BaseEntity.
+// Activated through Spring Boot auto-configuration; a service only needs the dependency
+// (plus its JDBC driver and Flyway).
+plugins {
+    id 'java-library'
+    id 'crypto-trading.java-conventions'
+    id 'crypto-trading.test-conventions'
+}
+
+dependencies {
+    api 'com.baomidou:mybatis-plus-spring-boot4-starter'
+    // PaginationInnerInterceptor and BlockAttackInnerInterceptor live here since MyBatis-Plus 3.5.9.
+    api 'com.baomidou:mybatis-plus-jsqlparser'
+    // The current user comes from the Spring Security context when there is one; optional, so a
+    // service without security (e.g. a pure Kafka consumer) still works and acts as system:<app>.
+    compileOnly 'org.springframework.security:spring-security-core'
+
+    testImplementation 'org.springframework.security:spring-security-core'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Mapper slice (@MybatisPlusTest) against a real PostgreSQL in a container (design.md Q7).
+    integrationTestImplementation 'com.baomidou:mybatis-plus-spring-boot4-starter-test'
+    integrationTestImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    integrationTestImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    integrationTestImplementation 'org.testcontainers:testcontainers-postgresql'
+    integrationTestImplementation 'org.springframework.security:spring-security-core'
+    // Schema through Flyway, as in the services (design.md 6.1).
+    integrationTestImplementation 'org.springframework.boot:spring-boot-starter-flyway'
+    integrationTestRuntimeOnly 'org.flywaydb:flyway-database-postgresql'
+    integrationTestRuntimeOnly 'org.postgresql:postgresql'
+}

@@ -1,4 +1,5 @@
-// Servlet web conventions: RFC 9457 Problem Details, Jackson 3 settings, API versioning.
+// Servlet web conventions: RFC 9457 Problem Details, Jackson 3 settings, API versioning, and the
+// shared security setup (OAuth2 Resource Server with Keycloak JWTs, design.md 8.2).
 // Activated through Spring Boot auto-configuration; a service only needs the dependency.
 plugins {
     id 'java-library'
@@ -9,6 +10,9 @@ plugins {
 dependencies {
     api project(':libs:common-core')
     api 'org.springframework.boot:spring-boot-starter-jackson'
+    // Every service is a Resource Server, so the starter is part of the API (the WebFlux gateway
+    // needs it too and configures its own reactive security chain).
+    api 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
     // Spring MVC is provided by the service (spring-boot-starter-webmvc). Keeping it compileOnly
     // lets a non-servlet module (e.g. the WebFlux gateway) use the Jackson part without pulling in MVC.
     compileOnly 'org.springframework.boot:spring-boot-starter-webmvc'
@@ -16,4 +20,5 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
 }
