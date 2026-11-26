@@ -2,7 +2,7 @@
 # --env-file .env.local (secrets) and the requested profiles.
 #
 # Profiles (design.md 10.2):
-#   core  PostgreSQL + TimescaleDB, Redis, Nacos, Vault   (Keycloak is added in P1)
+#   core  PostgreSQL + TimescaleDB, Redis, Nacos, Vault, Keycloak (P1-T01)
 #   mq    Kafka, Apicurio, Kafka UI                       (P3)
 #   obs   Prometheus, Grafana (P0-T07); OTel Collector, Tempo, Loki, Alloy in P8
 #   mock  alpaca-mock                                     (P2)
@@ -123,6 +123,55 @@ services:
       timeout: 5s
       retries: 30
       start_period: 30s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    profiles: [core]
+    # Development mode (design.md 10.1) with PostgreSQL schema `keycloak`. The realm file is imported
+    # on start only when the realm does not exist yet; placeholders like ${KEYCLOAK_DEV_ALICE_PASSWORD}
+    # are replaced by Keycloak from the environment, so no secret is in the repository.
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/crypto
+      KC_DB_SCHEMA: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${DB_PASSWORD_KEYCLOAK:?set in .env.local}
+      KC_HTTP_PORT: "8180"
+      # Tokens always carry the issuer http://localhost:8180/realms/crypto-trading (what browsers and
+      # services on the host use); containers may still call http://keycloak:8180 for back-channel requests.
+      KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      # Admin of the `master` realm (Keycloak admin console).
+      KC_BOOTSTRAP_ADMIN_USERNAME: kc-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set in .env.local}
+      JAVA_OPTS_KC_HEAP: -Xms384m -Xmx384m
+      # Values substituted into the realm import file.
+      KEYCLOAK_DEV_ADMIN_PASSWORD: ${KEYCLOAK_DEV_ADMIN_PASSWORD:?set in .env.local}
+      KEYCLOAK_DEV_ALICE_PASSWORD: ${KEYCLOAK_DEV_ALICE_PASSWORD:?set in .env.local}
+      GRAFANA_OAUTH_CLIENT_SECRET: ${GRAFANA_OAUTH_CLIENT_SECRET:?set in .env.local}
+    ports:
+      - "127.0.0.1:8180:8180"
+    volumes:
+      - ../keycloak/realm-crypto-trading.json:/opt/keycloak/data/import/realm-crypto-trading.json:ro
+    mem_limit: 1g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # The image has no curl / wget: talk HTTP to the management port (9000) through bash.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          grep -q '"status": *"UP"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   vault:
     image: hashicorp/vault:2.2.2

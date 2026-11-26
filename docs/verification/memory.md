@@ -88,3 +88,18 @@ hello 的 JVM：堆已用 81 MiB、已提交 249 MiB（SerialGC 的初始堆按�
 - 按单个组件、`docker stats` 口径：Nacos +38%、Vault +32% 超过 30%；按 anon（真实占用）口径：只有 Nacos 高出 16%，不超过 30%。
 - **用户决定（2026-11-24）：不算触发，按实测修正 design.md 10.1。** 理由：停止条件是为了发现"内存不够用"，而合计明显低于估算；超出部分要么是可回收的页缓存（Vault），要么只高 16%（Nacos 的真实占用）。
 - design.md 10.1 的修改：Nacos 估算 0.6 GB → **0.75 GB**，合计约 7.8 GB → 约 8 GB；表格加了"P0 实测"列；写明测量口径以 cgroup `anon` 为准。PostgreSQL、Redis 目前是空库，hello 没有业务代码，这几项不按 P0 读数下调，保留原估算，后续阶段再复测。
+
+## P1-T01：Compose `core` 加入 Keycloak（2026-11-26）
+
+`scripts/dev.sh up core`（本次没有启动 `obs`）。Keycloak 26.8.2 开发模式，存储用 PostgreSQL 的 `keycloak` schema，堆固定 384 MiB（`JAVA_OPTS_KC_HEAP=-Xms384m -Xmx384m`），容器上限 1 GiB。删除 PostgreSQL 数据卷重建、realm 导入、自助注册 3 个用户、若干次登录之后，每分钟读一次。
+
+| 组件 | `docker stats` | anon（实际） | design.md 10.1 估算 | 差异（stats / anon） |
+| --- | --- | --- | --- | --- |
+| keycloak（启动后约 2 分钟） | 522 MiB | 475 MiB | | |
+| keycloak（约 4 分钟，读数稳定） | 589 MiB | 537 MiB | 0.6 GB | −4% / −13% |
+| postgres（Keycloak 已建 101 张表） | 96 MiB | 31 MiB | 0.4 GB | 低于估算 |
+| nacos | 810 MiB | 680 MiB | 0.75 GB | −11%（anon） |
+
+- Keycloak 进程有 53 个线程。启动后几分钟内 anon 还在上涨（475 → 537 MiB），之后稳定；在估算之内，但余量不大（约 80 MiB）。P1 后续任务有 gateway、account 一起运行时再复测。
+- PostgreSQL 因为有了 Keycloak 的表和连接，anon 从 16 MiB 升到 31 MiB。
+- 不需要调整 design.md 10.1。

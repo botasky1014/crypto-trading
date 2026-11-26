@@ -38,11 +38,36 @@
 3. 获取 OIDC 配置：`curl -s localhost:8180/realms/crypto-trading/.well-known/openid-configuration | jq .issuer`。
 
 **Checklist：**
-- [ ] realm 从文件自动导入，删除卷重建后仍正确
-- [ ] 自助注册可用且不要求验证邮箱
-- [ ] 新注册用户自动拥有 `user` 角色
-- [ ] 开发账号密码不在仓库中
-- [ ] 内存占用更新到 `docs/verification/memory.md`
+- [x] realm 从文件自动导入，删除卷重建后仍正确
+- [x] 自助注册可用且不要求验证邮箱
+- [x] 新注册用户自动拥有 `user` 角色
+- [x] 开发账号密码不在仓库中
+- [x] 内存占用更新到 `docs/verification/memory.md`
+
+**说明（2026-11-26 完成时）：**
+- 镜像 `quay.io/keycloak/keycloak:26.8.2`（26.x 最新，有 `linux/arm64`）。`start-dev --import-realm`，数据库 PostgreSQL `crypto` 库的 `keycloak` schema（用户 `keycloak`，P0-T04 已建好）。容器内也监听 8180（`KC_HTTP_PORT`），端口只绑定 `127.0.0.1`。健康检查：镜像里没有 curl / wget，用 bash 的 `/dev/tcp` 请求管理端口 9000 的 `/health/ready`。
+- **issuer 固定。** `KC_HOSTNAME=http://localhost:8180` + `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`：令牌的 issuer 永远是 `http://localhost:8180/realms/crypto-trading`（浏览器和宿主机上的服务用这个地址），容器里的组件（P1-T08 的 Grafana）可以通过 `http://keycloak:8180` 做后端请求，issuer 不变。
+- **密钥用占位符。** 计划写的是"导入脚本替换占位符"，实际用的是 Keycloak 导入时自带的环境变量替换：realm 文件里写 `${KEYCLOAK_DEV_ALICE_PASSWORD}` 这样的占位符，值由 Compose 从 `.env.local` 传给容器。实测：开发账号能用 `.env.local` 中的密码登录，用占位符字面量登录被拒绝；`grafana` 的 client secret 和 `.env.local` 一致。新增密钥键：`KEYCLOAK_ADMIN_PASSWORD`（master realm 管理员 `kc-admin`）、`KEYCLOAK_DEV_ADMIN_PASSWORD`、`KEYCLOAK_DEV_ALICE_PASSWORD`、`GRAFANA_OAUTH_CLIENT_SECRET`。master realm 管理员叫 `kc-admin`，避免和业务 realm 的开发账号 `admin` 混淆。
+- realm 设置（`deploy/keycloak/realm-crypto-trading.json`，说明见同目录 README）：
+  - 自助注册开启，不验证邮箱，可用用户名或邮箱登录；注册表单是 Keycloak 默认的（用户名、邮箱、名、姓、密码）。
+  - 登录失败锁定：5 次失败后临时锁定，等待时间从 60 秒递增，最长 15 分钟；不永久锁定。具体数值计划没有规定，是我定的。
+  - 默认角色 `default-roles-crypto-trading` 包含 `user`（以及 `account` 的 `view-profile`、`manage-account`，用于个人账户页）。Keycloak 导入时还会自动给默认角色加上 `offline_access`、`uma_authorization`，属于 Keycloak 默认行为，保留。
+  - 访问令牌 300 秒；刷新令牌 30 分钟（SSO 会话空闲超时 1800 秒），会话最长 10 小时。
+  - 国际化：`en`、`zh-CN`，默认 `en`；`ui_locales=zh-CN` 时登录页和注册页显示 Keycloak 自带的中文（"登录到 crypto-trading"），页面上有语言切换。仓库里没有写中文。
+  - 开启了用户事件和管理事件（保留 7 天），供 design.md 5.9.1 的 Keycloak 审计使用（P8 经 Alloy 送入 Loki）。计划没有要求，属于提前打开开关。
+  - `web`：public client，只开授权码流程，PKCE `S256`，回调地址 `http://localhost:5173/*`、`http://localhost:8080/swagger-ui/*`、`http://localhost:12345/http-client/callback`。最后一个是 IntelliJ HTTP Client 用的：JetBrains 文档没有写默认回调地址，所以在仓库里固定这个值，P1-T03 的 `http-client.env.json` 用同一个地址（`"Redirect URL"`，并设置 `"PKCE": true`）。
+  - `grafana`：confidential client，回调 `http://localhost:3000/login/generic_oauth`；加了 realm 角色映射器，ID 令牌、访问令牌、userinfo 中都有 `roles` 声明。
+  - 开发账号 `admin`（`admin` + `user`）、`alice`（`user`），邮箱 `@example.com`。
+- **令牌里的角色。** 用 Keycloak 的"生成示例令牌"接口确认：`web` 的访问令牌有 `realm_access.roles`（P1-T02 的角色映射用它），`grafana` 的 ID 令牌和访问令牌有 `roles`。注意：Keycloak 26 的 `admin-cli` 默认签发"轻量访问令牌"，不带角色等声明，所以不能用 `admin-cli` 的令牌检查角色。
+- `scripts/keycloak-export.sh`：在运行中的容器里执行 `kc.sh export`。必须加 `--health-enabled=false --metrics-enabled=false`，否则导出进程要占用管理端口 9000（已被运行中的服务占用），导出完成后报错退出。导出后用 jq 清理：删除签名 / 加密密钥（含私钥、HMAC / AES 密钥，导入时重新生成），客户端密钥换回占位符（`grafana` → `${GRAFANA_OAUTH_CLIENT_SECRET}`，其他客户端 → `${KEYCLOAK_CLIENT_SECRET_<ID>}` 并提示补到 `.env.example`），只保留 `admin`、`alice` 且密码换回占位符，删除自助注册的用户；清理后如果仍检测到密码哈希或私钥就不写文件。实测：导出结果中查不到 `.env.local` 里的任何实际值；把导出结果导入一个临时的 Keycloak 容器，导入成功。仓库里的 realm 文件仍是手写的精简版，导出版本包含 Keycloak 的全部默认值，会长很多。
+- 验证：
+  1. `scripts/dev.sh up core` 后 Keycloak 约 16 秒 healthy，日志 `Realm 'crypto-trading' imported`；`kc-admin` 登录后能看到 `master`、`crypto-trading` 两个 realm（通过管理 API 验证，和控制台相同）。
+  2. 用 curl 走完真实的注册表单：授权码 + PKCE 请求 → 提交注册表单 → 直接重定向回 `http://localhost:5173/callback` 并带授权码（没有验证邮件步骤）→ 用 `code_verifier` 换到令牌，`email_verified: false`，`realm_access.roles` 含 `user`，有效期 300 秒。中文注册页（`ui_locales=zh-CN`）也注册成功。
+  3. `curl -s localhost:8180/realms/crypto-trading/.well-known/openid-configuration | jq .issuer` → `"http://localhost:8180/realms/crypto-trading"`。
+  - 登录失败锁定：对测试用户连续输错密码后，`attack-detection` 显示该用户 `disabled: true`（临时锁定）。
+  - 删除卷重建：确认 PostgreSQL 中只有 `keycloak` schema 有表（其他 schema 为空）后，删除 PostgreSQL 数据卷重新启动：realm 重新导入，只剩 `admin`、`alice` 两个用户，设置全部正确，开发账号能登录，自助注册仍可用。
+  - 验证 1、2 的控制台 / 个人账户页面没有在浏览器里手动点过，用的是相同的接口和表单。
+- 内存：Keycloak 约 4 分钟后稳定在 537 MiB（anon），比估算 0.6 GB 低 13%，见 `docs/verification/memory.md`。
 
 ---
 

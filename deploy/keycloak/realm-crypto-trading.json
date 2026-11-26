@@ -1,0 +1,198 @@
+{
+  "realm": "crypto-trading",
+  "displayName": "crypto-trading",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "sslRequired": "external",
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 43200,
+  "minimumQuickLoginWaitSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "revokeRefreshToken": false,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "zh-CN"
+  ],
+  "defaultLocale": "en",
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular user (given on registration)"
+      },
+      {
+        "name": "admin",
+        "description": "Platform administrator"
+      },
+      {
+        "name": "default-roles-crypto-trading",
+        "description": "Roles given to every new user",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "user"
+          ],
+          "client": {
+            "account": [
+              "view-profile",
+              "manage-account"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-crypto-trading"
+  },
+  "clients": [
+    {
+      "clientId": "web",
+      "name": "crypto-trading web",
+      "description": "Browser frontend, Swagger UI and IntelliJ HTTP Client: authorization code + PKCE",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:8080/swagger-ui/*",
+        "http://localhost:12345/http-client/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:8080/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "basic",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "description": "Grafana single sign-on (P1-T08); Grafana only lets the admin role in",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${GRAFANA_OAUTH_CLIENT_SECRET}",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/login/generic_oauth"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "basic",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@example.com",
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KEYCLOAK_DEV_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-crypto-trading",
+        "admin"
+      ]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alice@example.com",
+      "firstName": "Alice",
+      "lastName": "Example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KEYCLOAK_DEV_ALICE_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-crypto-trading"
+      ]
+    }
+  ],
+  "eventsEnabled": true,
+  "eventsExpiration": 604800,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true
+}
